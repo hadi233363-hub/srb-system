@@ -1,5 +1,7 @@
-import { ControlPage } from "@/components/control/control-page";
+import { redirect } from "next/navigation";
 
-export default function Page() {
-  return <ControlPage />;
+// غرفة القرارات كانت للمحاكاة — Phase 2 ما يحتاجها.
+// نحوّل للرئيسية إذا فتحها أحد.
+export default function ControlPage() {
+  redirect("/");
 }

@@ -1,0 +1,178 @@
+// SRB — Real company management system (Phase 2)
+// Replaces the in-memory simulation with persistent SQLite storage.
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Login + role; mirrors the existing auth.db.authorized_users table,
+// but owned by Prisma going forward (single source of truth).
+model User {
+  id          String    @id @default(cuid())
+  email       String    @unique
+  name        String
+  role        String    @default("employee") // admin | manager | employee
+  department  String?
+  active      Boolean   @default(true)
+  // First-approval timestamp. null = pending admin approval (never approved yet).
+  // Not-null = admin has approved this account (may still be toggled inactive later).
+  approvedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  lastLoginAt DateTime?
+
+  // Employee profile
+  jobTitle     String?
+  phone        String?
+  salaryQar    Float?
+  hiredAt      DateTime?
+  avatarUrl    String?
+
+  // Relations
+  tasksAssigned      Task[]             @relation("TaskAssignee")
+  tasksCreated       Task[]             @relation("TaskCreator")
+  taskCollaborations TaskCollaborator[]
+  comments           TaskComment[]
+  updates            TaskUpdate[]
+  memberships        ProjectMember[]
+  leadsProjects      Project[]          @relation("ProjectLead")
+}
+
+model Client {
+  id        String    @id @default(cuid())
+  name      String
+  email     String?
+  phone     String?
+  notes     String?
+  createdAt DateTime  @default(now())
+  projects  Project[]
+}
+
+model Project {
+  id           String    @id @default(cuid())
+  title        String
+  description  String?
+  clientId     String?
+  client       Client?   @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  type         String? // video | photo | event | digital_campaign | web | other
+  status       String    @default("active") // active | on_hold | completed | cancelled
+  priority     String    @default("normal") // low | normal | high | urgent
+  budgetQar    Float     @default(0)
+  startedAt    DateTime  @default(now())
+  deadlineAt   DateTime?
+  completedAt  DateTime?
+  progressPct  Int       @default(0) // 0..100 — manual or computed from tasks
+  // Billing type — one_time: budget is a single payment; monthly: budget is the recurring monthly amount.
+  billingType  String    @default("one_time") // one_time | monthly
+  leadId       String?
+  lead         User?     @relation("ProjectLead", fields: [leadId], references: [id], onDelete: SetNull)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  members      ProjectMember[]
+  tasks        Task[]
+  transactions Transaction[]
+}
+
+model ProjectMember {
+  projectId String
+  userId    String
+  role      String? // lead | designer | developer | editor | account | sales | ...
+  addedAt   DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([projectId, userId])
+}
+
+model Task {
+  id             String    @id @default(cuid())
+  projectId      String?
+  project        Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  title          String
+  description    String?
+  status         String    @default("todo") // todo | in_progress | in_review | done | blocked
+  priority       String    @default("normal") // low | normal | high | urgent
+  assigneeId     String?
+  assignee       User?     @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  creatorId      String
+  creator        User      @relation("TaskCreator", fields: [creatorId], references: [id])
+  dueAt          DateTime?
+  startedAt      DateTime?
+  completedAt    DateTime?
+  estimatedHours Float?
+  actualHours    Float?
+  order          Int       @default(0) // for Kanban column ordering
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  comments      TaskComment[]
+  updates       TaskUpdate[]
+  collaborators TaskCollaborator[]
+}
+
+// Secondary assignees on a task — beyond the primary assignee.
+// Used for tasks that multiple people work on together.
+model TaskCollaborator {
+  taskId  String
+  userId  String
+  task    Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  addedAt DateTime @default(now())
+
+  @@id([taskId, userId])
+}
+
+model TaskComment {
+  id        String   @id @default(cuid())
+  taskId    String
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id])
+  content   String
+  createdAt DateTime @default(now())
+}
+
+model TaskUpdate {
+  id        String   @id @default(cuid())
+  taskId    String
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  actorId   String
+  actor     User     @relation(fields: [actorId], references: [id])
+  type      String // created | status_change | assignee_change | priority_change | due_change
+  fromValue String?
+  toValue   String?
+  createdAt DateTime @default(now())
+}
+
+// Manual-entry accounting ledger.
+model Transaction {
+  id          String    @id @default(cuid())
+  projectId   String?
+  project     Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  kind        String // income | expense
+  category    String // project_payment | salary | bonus | tool | ad | overhead | refund | other
+  amountQar   Float // always positive; sign comes from kind
+  description String?
+  occurredAt  DateTime
+  // Recurrence — none: one-time; monthly: recurring every month starting occurredAt until recurrenceEndsAt (or forever).
+  recurrence       String    @default("none") // none | monthly
+  recurrenceEndsAt DateTime?
+  createdAt        DateTime  @default(now())
+  createdById      String?
+}
+
+// System-level settings (single row).
+model AppSetting {
+  id                Int     @id @default(1)
+  companyName       String  @default("SRB")
+  defaultCurrency   String  @default("QAR")
+  fiscalYearStart   Int     @default(1) // month 1 = January
+  notificationsOn   Boolean @default(true)
+  simulationEnabled Boolean @default(false) // kept off
+}

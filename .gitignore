@@ -32,6 +32,18 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.local.example
+
+# auth database (contains real user accounts — never commit)
+auth.db
+auth.db-*
+
+# Prisma SQLite runtime (local dev + Railway volume keep their own copy)
+prisma/app.db
+prisma/app.db-*
+prisma/migrations/
+app.db
+app.db-*
 
 # vercel
 .vercel

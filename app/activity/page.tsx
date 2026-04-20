@@ -1,5 +1,6 @@
-import { ActivityPage } from "@/components/activity/activity-page";
+import { redirect } from "next/navigation";
 
-export default function Page() {
-  return <ActivityPage />;
+// النشاط في Phase 2 جاي مع نظام المهام — نحوّل للرئيسية مؤقتاً.
+export default function ActivityPage() {
+  redirect("/");
 }
