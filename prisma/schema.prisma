@@ -40,6 +40,13 @@ model User {
   updates            TaskUpdate[]
   memberships        ProjectMember[]
   leadsProjects      Project[]          @relation("ProjectLead")
+  auditEntries       AuditLog[]         @relation("AuditActor")
+  meetings           ClientMeeting[]    @relation("MeetingOwner")
+  shootCrew          PhotoShootCrew[]
+  heldEquipment      Equipment[]        @relation("EquipmentHolder")
+
+  @@index([active])
+  @@index([role])
 }
 
 model Client {
@@ -68,6 +75,21 @@ model Project {
   progressPct  Int       @default(0) // 0..100 — manual or computed from tasks
   // Billing type — one_time: budget is a single payment; monthly: budget is the recurring monthly amount.
   billingType  String    @default("one_time") // one_time | monthly
+  // Monthly billing cycle length (days). Default 30 = every 30 days from the
+  // cycle anchor. Overridable per-project so a client on a 15/45/60-day cycle fits.
+  billingCycleDays Int    @default(30)
+  // When the next invoice should go out. Set on create for monthly projects
+  // (= startedAt + billingCycleDays) and advanced each time an invoice is recorded.
+  // Null for one-time projects.
+  nextInvoiceDueAt DateTime?
+  // When the most recent invoice was collected — used for status badges and
+  // to keep the "already paid this cycle?" check fast.
+  lastInvoicedAt   DateTime?
+  // Per-cycle reminder fire tracking. Reset to null when an invoice is recorded
+  // (advancing to the next cycle) so a fresh set of reminders fires for it.
+  invoiceReminderBeforeSentAt   DateTime?
+  invoiceReminderDueSentAt      DateTime?
+  invoiceReminderOverdueSentAt  DateTime?
   leadId       String?
   lead         User?     @relation("ProjectLead", fields: [leadId], references: [id], onDelete: SetNull)
   createdAt    DateTime  @default(now())
@@ -76,6 +98,13 @@ model Project {
   members      ProjectMember[]
   tasks        Task[]
   transactions Transaction[]
+  shoots       PhotoShoot[]
+
+  @@index([status])
+  @@index([clientId])
+  @@index([leadId])
+  @@index([deadlineAt])
+  @@index([nextInvoiceDueAt])
 }
 
 model ProjectMember {
@@ -114,6 +143,13 @@ model Task {
   comments      TaskComment[]
   updates       TaskUpdate[]
   collaborators TaskCollaborator[]
+
+  @@index([projectId])
+  @@index([assigneeId])
+  @@index([creatorId])
+  @@index([status])
+  @@index([dueAt])
+  @@index([assigneeId, status])
 }
 
 // Secondary assignees on a task — beyond the primary assignee.
@@ -136,6 +172,9 @@ model TaskComment {
   author    User     @relation(fields: [authorId], references: [id])
   content   String
   createdAt DateTime @default(now())
+
+  @@index([taskId])
+  @@index([authorId])
 }
 
 model TaskUpdate {
@@ -148,6 +187,9 @@ model TaskUpdate {
   fromValue String?
   toValue   String?
   createdAt DateTime @default(now())
+
+  @@index([taskId])
+  @@index([actorId])
 }
 
 // Manual-entry accounting ledger.
@@ -165,6 +207,11 @@ model Transaction {
   recurrenceEndsAt DateTime?
   createdAt        DateTime  @default(now())
   createdById      String?
+
+  @@index([occurredAt])
+  @@index([projectId])
+  @@index([kind])
+  @@index([recurrence])
 }
 
 // System-level settings (single row).
@@ -175,4 +222,195 @@ model AppSetting {
   fiscalYearStart   Int     @default(1) // month 1 = January
   notificationsOn   Boolean @default(true)
   simulationEnabled Boolean @default(false) // kept off
+
+  // Theme — admin can customize branding colors (CSS variables).
+  brandColor  String @default("#10b981") // emerald-500
+  accentColor String @default("#0ea5e9") // sky-500
+  logoPath    String @default("/srb-logo-white.png") // path under public/ (white-on-transparent PNG)
+}
+
+// Tamper-resistant admin action trail. Every sensitive mutation writes one row
+// so you can answer "who approved this user", "when was that salary changed", etc.
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  actor      User?    @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+  actorEmail String   // Snapshot — survives if actor is deleted
+  action     String   // e.g. "user.approve", "user.deactivate", "user.role_change", "tx.delete"
+  targetType String?  // e.g. "user", "project", "task", "transaction"
+  targetId   String?
+  targetLabel String? // Human-readable target ("هادي · hadi.233363@gmail.com")
+  metadata   String?  // JSON string with extra details (before/after values, reason)
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([actorId])
+  @@index([action])
+  @@index([targetType, targetId])
+}
+
+// Client meetings — intake requests + pitch calls + check-ins with clients.
+// Tracks the full lifecycle: scheduled → (reminder fired) → done | cancelled | no_show.
+model ClientMeeting {
+  id          String   @id @default(cuid())
+  clientName  String   // اسم العميل / الشخص المسؤول
+  companyName String?  // اسم الشركة (اختياري)
+  phone       String?
+  email       String?
+
+  // Client's digital footprint (so the team opens & reviews before the meeting)
+  instagramHandle String? // @handle or full URL — both accepted
+  tiktokHandle    String?
+  websiteUrl      String?
+  socialNotes     String? // Free-form: "also on snapchat, 500K followers"
+
+  // Meeting logistics
+  meetingAt    DateTime
+  durationMin  Int       @default(60)
+  location     String?   // "Office" | "Client site" | physical address | "Online"
+  meetingLink  String?   // Zoom / Google Meet / Teams URL
+  agendaNotes  String?   // Pre-meeting prep: what to discuss / goals
+
+  // Lifecycle
+  status       String    @default("scheduled") // scheduled | done | cancelled | no_show
+  outcomeNotes String?   // Post-meeting: what was agreed, next steps
+
+  // Assignment
+  ownerId String?
+  owner   User?   @relation("MeetingOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+
+  // Reminder tracking — set to the wall-clock time the "1h before" alert fired.
+  // Null means the reminder hasn't gone out yet.
+  reminderSentAt DateTime?
+
+  // Audit
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdById String?
+
+  @@index([meetingAt])
+  @@index([status])
+  @@index([ownerId])
+  @@index([status, meetingAt])
+}
+
+// ---------------------------------------------------------------------------
+// Photography production system
+// ---------------------------------------------------------------------------
+// A PhotoShoot is the on-location production day for a project. It pins down
+// the WHO (crew), WHEN (shootDate + duration), WHERE (location + map), and
+// WHAT (equipment reservations + shot list). Crew members are employees —
+// this is internal-facing, unlike ClientMeeting which is about the buyer.
+
+model PhotoShoot {
+  id            String  @id @default(cuid())
+  title         String
+  projectId     String?
+  project       Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  // Timing
+  shootDate     DateTime
+  durationHours Float    @default(4)
+
+  // Location
+  location      String
+  locationNotes String?  // floor, landmarks, entry instructions
+  mapUrl        String?  // Google Maps / Apple Maps link
+
+  // Logistics
+  clientContact String?  // who to call on site
+  shotList      String?  // freeform brief / checklist
+  referenceUrl  String?  // moodboard / Drive link
+
+  // Lifecycle
+  status        String   @default("scheduled") // scheduled | done | cancelled | postponed
+  notes         String?
+
+  // Notification tracking — we fire 24h-before AND 1h-before alerts.
+  reminderDayBeforeSentAt DateTime?
+  reminderHourBeforeSentAt DateTime?
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  createdById   String?
+
+  crew          PhotoShootCrew[]
+  equipment     PhotoShootEquipment[]
+
+  @@index([shootDate])
+  @@index([projectId])
+  @@index([status])
+  @@index([status, shootDate])
+}
+
+// Crew member assigned to a shoot. One user can be on many shoots; one shoot
+// has many users.
+model PhotoShootCrew {
+  shootId String
+  userId  String
+  role    String?  // "photographer" | "videographer" | "assistant" | "director" | custom
+  shoot   PhotoShoot @relation(fields: [shootId], references: [id], onDelete: Cascade)
+  user    User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  addedAt DateTime @default(now())
+
+  @@id([shootId, userId])
+  @@index([userId])
+}
+
+// Equipment reserved for a shoot. We use this both to plan ("what are we taking")
+// and to detect conflicts ("this lens is already booked that day").
+model PhotoShootEquipment {
+  shootId     String
+  equipmentId String
+  shoot       PhotoShoot @relation(fields: [shootId], references: [id], onDelete: Cascade)
+  equipment   Equipment  @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+  addedAt     DateTime @default(now())
+
+  @@id([shootId, equipmentId])
+  @@index([equipmentId])
+}
+
+// ---------------------------------------------------------------------------
+// Equipment inventory — the agency's physical gear.
+// ---------------------------------------------------------------------------
+model Equipment {
+  id           String   @id @default(cuid())
+  name         String   // "Sony A7 IV" / "Sigma 24-70 f/2.8" / "Aputure 300D"
+  category     String   // camera | lens | light | tripod | microphone | drone | audio | storage | accessory | other
+  brand        String?
+  model        String?
+  serialNumber String?
+  purchasedAt  DateTime?
+  purchasePriceQar Float?
+
+  condition    String   @default("good") // new | good | fair | needs_repair | broken
+  notes        String?
+  photoUrl     String?
+
+  // Current holder — who physically has this gear right now.
+  // Null = in office / storage.
+  currentHolderId String?
+  currentHolder   User?   @relation("EquipmentHolder", fields: [currentHolderId], references: [id], onDelete: SetNull)
+  assignedAt      DateTime?
+  expectedReturnAt DateTime?
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  shootReservations PhotoShootEquipment[]
+
+  @@index([category])
+  @@index([condition])
+  @@index([currentHolderId])
+}
+
+// Backup run history — records when backups happened and their size.
+model BackupRun {
+  id        String   @id @default(cuid())
+  filePath  String
+  sizeBytes Int
+  createdAt DateTime @default(now())
+  trigger   String   // "manual" | "scheduled"
+
+  @@index([createdAt])
 }

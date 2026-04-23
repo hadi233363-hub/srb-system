@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Plus, X } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { createTransactionAction } from "./actions";
+import { useT } from "@/lib/i18n/client";
 
 interface ProjectLite {
   id: string;
@@ -15,6 +16,7 @@ interface ProjectLite {
 const MONTHLY_DEFAULT = new Set(["salary", "overhead", "tool"]);
 
 export function NewTransactionButton({ projects }: { projects: ProjectLite[] }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -49,23 +51,23 @@ export function NewTransactionButton({ projects }: { projects: ProjectLite[] }) 
         formRef.current?.reset();
         router.refresh();
       } else {
-        setError(res.message ?? "خطأ");
+        setError(res.message ?? t("common.error"));
       }
     });
   };
 
   const incomeCategories = [
-    { value: "project_payment", label: "دفعة مشروع" },
-    { value: "other", label: "غير ذلك" },
+    { value: "project_payment", label: t("txCategory.project_payment") },
+    { value: "other", label: t("txCategory.other") },
   ];
   const expenseCategories = [
-    { value: "salary", label: "راتب (شهري افتراضياً)" },
-    { value: "bonus", label: "بونص" },
-    { value: "tool", label: "أدوات/اشتراكات (شهري)" },
-    { value: "ad", label: "إعلانات" },
-    { value: "overhead", label: "مصاريف عامة (إيجار/كهرباء)" },
-    { value: "refund", label: "ارتجاع/خسارة" },
-    { value: "other", label: "غير ذلك" },
+    { value: "salary", label: t("txCategory.salary") },
+    { value: "bonus", label: t("txCategory.bonus") },
+    { value: "tool", label: t("txCategory.tool") },
+    { value: "ad", label: t("txCategory.ad") },
+    { value: "overhead", label: t("txCategory.overhead") },
+    { value: "refund", label: t("txCategory.refund") },
+    { value: "other", label: t("txCategory.other") },
   ];
 
   return (
@@ -75,7 +77,7 @@ export function NewTransactionButton({ projects }: { projects: ProjectLite[] }) 
         className="flex items-center gap-2 rounded-lg bg-emerald-500 px-3 py-1.5 text-sm font-semibold text-emerald-950 transition hover:bg-emerald-400"
       >
         <Plus className="h-4 w-4" />
-        معاملة جديدة
+        {t("action.newTransaction")}
       </button>
 
       {open && (
@@ -85,7 +87,7 @@ export function NewTransactionButton({ projects }: { projects: ProjectLite[] }) 
         >
           <div className="w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-900 p-5 shadow-2xl">
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-lg font-bold">معاملة جديدة</h3>
+              <h3 className="text-lg font-bold">{t("finance.new.title")}</h3>
               <button
                 onClick={() => setOpen(false)}
                 className="text-zinc-500 hover:text-zinc-300"
@@ -103,7 +105,7 @@ export function NewTransactionButton({ projects }: { projects: ProjectLite[] }) 
             <form ref={formRef} action={onSubmit} className="space-y-3">
               {/* Kind toggle */}
               <div>
-                <label className="mb-1.5 block text-xs text-zinc-500">النوع</label>
+                <label className="mb-1.5 block text-xs text-zinc-500">{t("finance.field.kind")}</label>
                 <div className="grid grid-cols-2 gap-2">
                   <label
                     className={cn(
@@ -121,7 +123,7 @@ export function NewTransactionButton({ projects }: { projects: ProjectLite[] }) 
                       onChange={() => setKind("income")}
                       className="sr-only"
                     />
-                    💰 دخل
+                    💰 {t("tx.income")}
                   </label>
                   <label
                     className={cn(
@@ -139,13 +141,13 @@ export function NewTransactionButton({ projects }: { projects: ProjectLite[] }) 
                       onChange={() => setKind("expense")}
                       className="sr-only"
                     />
-                    💸 مصروف
+                    💸 {t("tx.expense")}
                   </label>
                 </div>
               </div>
 
               <div>
-                <label className="mb-1 block text-xs text-zinc-500">الفئة</label>
+                <label className="mb-1 block text-xs text-zinc-500">{t("finance.field.category")}</label>
                 <select
                   name="category"
                   required
@@ -166,7 +168,7 @@ export function NewTransactionButton({ projects }: { projects: ProjectLite[] }) 
               {/* Recurrence */}
               <div>
                 <label className="mb-1.5 block text-xs text-zinc-500">
-                  التكرار
+                  {t("finance.field.recurrence")}
                 </label>
                 <div className="grid grid-cols-2 gap-2">
                   <label
@@ -185,7 +187,7 @@ export function NewTransactionButton({ projects }: { projects: ProjectLite[] }) 
                       onChange={() => setRecurrence("none")}
                       className="sr-only"
                     />
-                    مرة واحدة
+                    {t("recurrence.none")}
                   </label>
                   <label
                     className={cn(
@@ -203,19 +205,14 @@ export function NewTransactionButton({ projects }: { projects: ProjectLite[] }) 
                       onChange={() => setRecurrence("monthly")}
                       className="sr-only"
                     />
-                    🔁 شهري متكرر
+                    🔁 {t("recurrence.monthly")}
                   </label>
                 </div>
-                {recurrence === "monthly" && (
-                  <div className="mt-1 text-[10px] text-sky-500/80">
-                    المبلغ بيُحتسب كل شهر تلقائياً — ما تحتاج تضيفه يدوياً كل شهر
-                  </div>
-                )}
               </div>
 
               <div>
                 <label className="mb-1 block text-xs text-zinc-500">
-                  المبلغ (ر.ق) *
+                  {t("finance.field.amount")} *
                 </label>
                 <input
                   name="amountQar"
@@ -230,7 +227,7 @@ export function NewTransactionButton({ projects }: { projects: ProjectLite[] }) 
 
               <div>
                 <label className="mb-1 block text-xs text-zinc-500">
-                  {recurrence === "monthly" ? "تاريخ البدء" : "التاريخ"}
+                  {t("finance.field.occurredAt")}
                 </label>
                 <input
                   name="occurredAt"
@@ -243,29 +240,26 @@ export function NewTransactionButton({ projects }: { projects: ProjectLite[] }) 
               {recurrence === "monthly" && (
                 <div>
                   <label className="mb-1 block text-xs text-zinc-500">
-                    تاريخ الإنهاء (اختياري)
+                    {t("finance.field.recurrenceEnds")}
                   </label>
                   <input
                     name="recurrenceEndsAt"
                     type="date"
                     className="w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 focus:border-emerald-500/50 focus:outline-none"
                   />
-                  <div className="mt-0.5 text-[10px] text-zinc-600">
-                    اتركه فارغ لو التكرار مستمر بلا نهاية
-                  </div>
                 </div>
               )}
 
               <div>
                 <label className="mb-1 block text-xs text-zinc-500">
-                  ربط بمشروع (اختياري)
+                  {t("finance.field.project")}
                 </label>
                 <select
                   name="projectId"
                   defaultValue=""
                   className="w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 focus:border-emerald-500/50 focus:outline-none"
                 >
-                  <option value="">بدون ربط</option>
+                  <option value="">—</option>
                   {projects.map((p) => (
                     <option key={p.id} value={p.id}>
                       {p.title}
@@ -275,15 +269,11 @@ export function NewTransactionButton({ projects }: { projects: ProjectLite[] }) 
               </div>
 
               <div>
-                <label className="mb-1 block text-xs text-zinc-500">الوصف</label>
+                <label className="mb-1 block text-xs text-zinc-500">{t("finance.field.description")}</label>
                 <textarea
                   name="description"
                   rows={2}
-                  placeholder={
-                    kind === "income"
-                      ? "مثال: دفعة أولى من العميل"
-                      : "مثال: اشتراك Adobe شهري"
-                  }
+                  placeholder={t("finance.field.descPlaceholder")}
                   className="w-full resize-none rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 focus:border-emerald-500/50 focus:outline-none"
                 />
               </div>
@@ -294,14 +284,14 @@ export function NewTransactionButton({ projects }: { projects: ProjectLite[] }) 
                   onClick={() => setOpen(false)}
                   className="rounded-md border border-zinc-800 px-3 py-1.5 text-xs text-zinc-400 hover:bg-zinc-800"
                 >
-                  إلغاء
+                  {t("action.cancel")}
                 </button>
                 <button
                   type="submit"
                   disabled={isPending}
                   className="rounded-md bg-emerald-500 px-4 py-1.5 text-sm font-semibold text-emerald-950 hover:bg-emerald-400 disabled:opacity-60"
                 >
-                  {isPending ? "يحفظ..." : "احفظ"}
+                  {isPending ? t("action.saving") : t("action.save")}
                 </button>
               </div>
             </form>

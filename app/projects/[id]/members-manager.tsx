@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { UserPlus, X } from "lucide-react";
 import { addMemberAction, removeMemberAction } from "../actions";
-import { cn } from "@/lib/cn";
+import { useT } from "@/lib/i18n/client";
 
 interface User {
   id: string;
@@ -25,6 +25,7 @@ export function ProjectMembersManager({
   currentMembers,
   allUsers,
 }: Props) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
@@ -38,7 +39,7 @@ export function ProjectMembersManager({
   };
 
   const onRemove = (userId: string) => {
-    if (!confirm("تشيل هذا الموظف من المشروع؟")) return;
+    if (!confirm(t("projects.members.removeConfirm"))) return;
     startTransition(async () => {
       await removeMemberAction(projectId, userId);
     });
@@ -51,7 +52,7 @@ export function ProjectMembersManager({
         className="flex items-center gap-2 rounded-lg border border-zinc-700 bg-zinc-800/50 px-3 py-1.5 text-xs font-semibold text-zinc-300 transition hover:border-emerald-500/30 hover:bg-emerald-500/5 hover:text-emerald-400"
       >
         <UserPlus className="h-3.5 w-3.5" />
-        إدارة الفريق
+        {t("projects.members.manage")}
       </button>
 
       {open && (
@@ -61,7 +62,7 @@ export function ProjectMembersManager({
         >
           <div className="w-full max-w-lg rounded-2xl border border-zinc-800 bg-zinc-900 p-5 shadow-2xl">
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-lg font-bold">إدارة الفريق</h3>
+              <h3 className="text-lg font-bold">{t("projects.members.manage")}</h3>
               <button
                 onClick={() => setOpen(false)}
                 className="text-zinc-500 hover:text-zinc-300"
@@ -73,11 +74,11 @@ export function ProjectMembersManager({
             <div className="space-y-4">
               <div>
                 <h4 className="mb-2 text-xs font-semibold text-zinc-400">
-                  الأعضاء الحاليون
+                  {t("projects.members.current")}
                 </h4>
                 {currentMembers.length === 0 ? (
                   <div className="rounded-lg border border-dashed border-zinc-800 p-3 text-center text-xs text-zinc-500">
-                    ما فيه أعضاء
+                    {t("projects.members.none")}
                   </div>
                 ) : (
                   <ul className="divide-y divide-zinc-800 rounded-lg border border-zinc-800">
@@ -94,7 +95,7 @@ export function ProjectMembersManager({
                           disabled={isPending}
                           className="rounded-md border border-rose-500/30 px-2 py-1 text-[11px] text-rose-400 transition hover:bg-rose-500/10 disabled:opacity-40"
                         >
-                          إزالة
+                          {t("projects.members.remove")}
                         </button>
                       </li>
                     ))}
@@ -104,11 +105,11 @@ export function ProjectMembersManager({
 
               <div>
                 <h4 className="mb-2 text-xs font-semibold text-zinc-400">
-                  إضافة عضو
+                  {t("projects.members.add")}
                 </h4>
                 {addable.length === 0 ? (
                   <div className="rounded-lg border border-dashed border-zinc-800 p-3 text-center text-xs text-zinc-500">
-                    كل الموظفين مضافين
+                    {t("projects.members.allAdded")}
                   </div>
                 ) : (
                   <ul className="divide-y divide-zinc-800 rounded-lg border border-zinc-800 max-h-64 overflow-auto">
@@ -118,6 +119,7 @@ export function ProjectMembersManager({
                         user={u}
                         onAdd={(role) => onAdd(u.id, role)}
                         disabled={isPending}
+                        t={t}
                       />
                     ))}
                   </ul>
@@ -128,7 +130,7 @@ export function ProjectMembersManager({
                 onClick={() => setOpen(false)}
                 className="w-full rounded-md border border-zinc-800 px-3 py-2 text-xs text-zinc-400 hover:bg-zinc-800"
               >
-                إغلاق
+                {t("action.close")}
               </button>
             </div>
           </div>
@@ -142,10 +144,12 @@ function AddRow({
   user,
   onAdd,
   disabled,
+  t,
 }: {
   user: User;
   onAdd: (role: string) => void;
   disabled: boolean;
+  t: (key: string) => string;
 }) {
   const [role, setRole] = useState(user.jobTitle || "");
   return (
@@ -157,7 +161,7 @@ function AddRow({
       <input
         value={role}
         onChange={(e) => setRole(e.target.value)}
-        placeholder="دوره"
+        placeholder={t("team.member.role")}
         className="w-24 rounded-md border border-zinc-700 bg-zinc-950 px-2 py-1 text-[11px] text-zinc-100 focus:border-emerald-500/50 focus:outline-none"
       />
       <button
@@ -165,7 +169,7 @@ function AddRow({
         disabled={disabled}
         className="rounded-md bg-emerald-500 px-2 py-1 text-[11px] font-semibold text-emerald-950 hover:bg-emerald-400 disabled:opacity-60"
       >
-        ضيف
+        {t("projects.members.addBtn")}
       </button>
     </li>
   );

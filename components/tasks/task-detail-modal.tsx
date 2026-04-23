@@ -1,15 +1,15 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Check, Trash2, UserIcon, UserPlus, X } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { deleteTaskAction, updateTaskAction } from "@/app/tasks/actions";
-import {
-  PRIORITY_LABEL,
-  TASK_STATUS_LABEL,
-  isOverdue,
-} from "@/lib/db/helpers";
+import { isOverdue } from "@/lib/db/helpers";
+import { useT } from "@/lib/i18n/client";
+
+const TASK_STATUSES = ["todo", "in_progress", "in_review", "done", "blocked"] as const;
+const PRIORITIES = ["low", "normal", "high", "urgent"] as const;
 
 export interface TaskDetail {
   id: string;
@@ -51,6 +51,7 @@ export function TaskDetailModal({
   onClose,
 }: Props) {
   const router = useRouter();
+  const t = useT();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [primaryAssigneeId, setPrimaryAssigneeId] = useState<string>(
@@ -88,13 +89,13 @@ export function TaskDetailModal({
         router.refresh();
         onClose();
       } else {
-        setError(res.message ?? "خطأ");
+        setError(res.message ?? t("common.error"));
       }
     });
   };
 
   const onDelete = () => {
-    if (!confirm("تحذف المهمة نهائياً؟")) return;
+    if (!confirm(t("tasks.deleteConfirm"))) return;
     startTransition(async () => {
       await deleteTaskAction(task.id);
       router.refresh();
@@ -131,7 +132,7 @@ export function TaskDetailModal({
         <div className="mb-4 flex items-start justify-between gap-3">
           <div>
             <div className="mb-1 text-[10px] uppercase tracking-wider text-zinc-500">
-              تعديل المهمة
+              {t("tasks.edit")}
             </div>
             <h3 className="text-lg font-bold text-zinc-100">{task.title}</h3>
             {task.project && (
@@ -150,7 +151,7 @@ export function TaskDetailModal({
 
         {overdue && (
           <div className="mb-3 rounded-lg border border-rose-500/40 bg-rose-500/5 px-3 py-2 text-xs text-rose-400">
-            ⚠ هذه المهمة متأخرة عن الـ deadline
+            {t("tasks.overdueBanner")}
           </div>
         )}
 
@@ -161,7 +162,7 @@ export function TaskDetailModal({
         )}
 
         <form action={onSubmit} className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <Field label="عنوان المهمة" full>
+          <Field label={t("tasks.field.title")} full>
             <input
               name="title"
               defaultValue={task.title}
@@ -170,35 +171,35 @@ export function TaskDetailModal({
             />
           </Field>
 
-          <Field label="الحالة">
+          <Field label={t("tasks.field.status")}>
             <select
               name="status"
               defaultValue={task.status}
               className="w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 focus:border-emerald-500/50 focus:outline-none"
             >
-              {Object.entries(TASK_STATUS_LABEL).map(([k, v]) => (
+              {TASK_STATUSES.map((k) => (
                 <option key={k} value={k}>
-                  {v}
+                  {t(`taskStatus.${k}`)}
                 </option>
               ))}
             </select>
           </Field>
 
-          <Field label="الأولوية">
+          <Field label={t("tasks.field.priority")}>
             <select
               name="priority"
               defaultValue={task.priority}
               className="w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 focus:border-emerald-500/50 focus:outline-none"
             >
-              {Object.entries(PRIORITY_LABEL).map(([k, v]) => (
+              {PRIORITIES.map((k) => (
                 <option key={k} value={k}>
-                  {v}
+                  {t(`priority.${k}`)}
                 </option>
               ))}
             </select>
           </Field>
 
-          <Field label="موعد التسليم">
+          <Field label={t("tasks.field.due")}>
             <input
               name="dueAt"
               type="date"
@@ -207,7 +208,7 @@ export function TaskDetailModal({
             />
           </Field>
 
-          <Field label="الساعات التقديرية">
+          <Field label={t("tasks.field.estimated")}>
             <input
               name="estimatedHours"
               type="number"
@@ -219,13 +220,13 @@ export function TaskDetailModal({
           </Field>
 
           {allowProjectChange && projects && (
-            <Field label="المشروع" full>
+            <Field label={t("tasks.field.project")} full>
               <select
                 name="projectId"
                 defaultValue={task.project?.id ?? ""}
                 className="w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 focus:border-emerald-500/50 focus:outline-none"
               >
-                <option value="">بدون مشروع</option>
+                <option value="">{t("tasks.noProject")}</option>
                 {projects.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.title}
@@ -235,7 +236,7 @@ export function TaskDetailModal({
             </Field>
           )}
 
-          <Field label="المسؤول الأساسي" full>
+          <Field label={t("tasks.field.assigneePrimary")} full>
             <select
               value={primaryAssigneeId}
               onChange={(e) => {
@@ -246,7 +247,7 @@ export function TaskDetailModal({
               }}
               className="w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 focus:border-emerald-500/50 focus:outline-none"
             >
-              <option value="">بدون مسؤول</option>
+              <option value="">{t("tasks.unassigned")}</option>
               {users.map((u) => (
                 <option key={u.id} value={u.id}>
                   {u.name}
@@ -258,12 +259,12 @@ export function TaskDetailModal({
           {/* Collaborators */}
           <div className="sm:col-span-2">
             <label className="mb-1.5 block text-xs text-zinc-500">
-              موظفون إضافيون (collaborators)
+              {t("tasks.field.collaborators")}
             </label>
             <div className="flex flex-wrap items-center gap-2 rounded-md border border-zinc-700 bg-zinc-950 p-2 min-h-[44px]">
               {collaboratorUsers.length === 0 && !showCollaboratorPicker && (
                 <span className="text-xs text-zinc-600">
-                  ما فيه موظفون إضافيون
+                  {t("tasks.collaborators.empty")}
                 </span>
               )}
               {collaboratorUsers.map((u) => (
@@ -290,7 +291,7 @@ export function TaskDetailModal({
                     className="flex items-center gap-1 rounded-full border border-dashed border-zinc-600 px-2 py-0.5 text-xs text-zinc-400 hover:border-emerald-500/40 hover:text-emerald-400"
                   >
                     <UserPlus className="h-3 w-3" />
-                    أضف موظف
+                    {t("tasks.collaborators.add")}
                   </button>
                   {showCollaboratorPicker && (
                     <div className="absolute right-0 top-full z-10 mt-1 max-h-56 w-56 overflow-auto rounded-lg border border-zinc-700 bg-zinc-900 shadow-xl">
@@ -314,12 +315,11 @@ export function TaskDetailModal({
               )}
             </div>
             <div className="mt-1 text-[10px] text-zinc-600">
-              المسؤول الأساسي + الموظفون الإضافيون كلهم يشوفون المهمة في قائمة
-              مهامهم.
+              {t("tasks.collaborators.hint")}
             </div>
           </div>
 
-          <Field label="الوصف" full>
+          <Field label={t("tasks.field.description")} full>
             <textarea
               name="description"
               rows={3}
@@ -336,7 +336,7 @@ export function TaskDetailModal({
               className="flex items-center gap-1.5 rounded-md border border-rose-500/30 bg-rose-500/5 px-3 py-1.5 text-xs text-rose-400 transition hover:bg-rose-500/15 disabled:opacity-40"
             >
               <Trash2 className="h-3.5 w-3.5" />
-              حذف المهمة
+              {t("tasks.delete")}
             </button>
             <div className="flex items-center gap-2">
               <button
@@ -345,7 +345,7 @@ export function TaskDetailModal({
                 disabled={isPending}
                 className="rounded-md border border-zinc-800 px-3 py-1.5 text-xs text-zinc-400 hover:bg-zinc-800"
               >
-                إلغاء
+                {t("action.cancel")}
               </button>
               <button
                 type="submit"
@@ -353,7 +353,7 @@ export function TaskDetailModal({
                 className="flex items-center gap-1.5 rounded-md bg-emerald-500 px-4 py-1.5 text-sm font-semibold text-emerald-950 hover:bg-emerald-400 disabled:opacity-60"
               >
                 <Check className="h-3.5 w-3.5" />
-                {isPending ? "يحفظ..." : "احفظ"}
+                {isPending ? t("action.saving") : t("action.save")}
               </button>
             </div>
           </div>

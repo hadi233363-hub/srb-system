@@ -12,10 +12,7 @@ import { auth } from "@/auth";
 import { cn } from "@/lib/cn";
 import {
   PRIORITY_COLOR,
-  PRIORITY_LABEL,
   PROJECT_STATUS_COLOR,
-  PROJECT_STATUS_LABEL,
-  PROJECT_TYPE_LABEL,
   formatDate,
   formatQar,
   isOverdue,
@@ -24,12 +21,16 @@ import { KanbanBoard } from "@/components/tasks/kanban-board";
 import { NewTaskButton } from "@/components/tasks/new-task-button";
 import { ProjectMembersManager } from "./members-manager";
 import { ProjectActionsMenu } from "./project-actions-menu";
+import { getLocale } from "@/lib/i18n/server";
+import { translate } from "@/lib/i18n/dict";
+import { InvoiceBadge } from "@/components/projects/invoice-badge";
 
 export default async function ProjectDetailPage(props: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = await props.params;
-  const session = await auth();
+  const [session, locale] = await Promise.all([auth(), getLocale()]);
+  const t = (key: string) => translate(key, locale);
   const canManage =
     session?.user.role === "admin" || session?.user.role === "manager";
 
@@ -93,7 +94,7 @@ export default async function ProjectDetailPage(props: {
         className="inline-flex items-center gap-1 text-xs text-zinc-500 hover:text-zinc-300"
       >
         <ArrowRight className="h-3 w-3" />
-        كل المشاريع
+        {t("projects.allProjects")}
       </Link>
 
       {/* Header */}
@@ -108,30 +109,30 @@ export default async function ProjectDetailPage(props: {
                   PROJECT_STATUS_COLOR[project.status]
                 )}
               >
-                {PROJECT_STATUS_LABEL[project.status]}
+                {t(`projectStatus.${project.status}`)}
               </span>
               <span className={cn("text-[11px]", PRIORITY_COLOR[project.priority])}>
-                ● أولوية {PRIORITY_LABEL[project.priority]}
+                ● {t("projects.priorityPrefix")} {t(`priority.${project.priority}`)}
               </span>
               {project.type && (
                 <span className="text-[11px] text-zinc-500">
-                  {PROJECT_TYPE_LABEL[project.type]}
+                  {t(`projectType.${project.type}`)}
                 </span>
               )}
               {project.billingType === "monthly" ? (
                 <span className="inline-flex items-center gap-1 rounded-full bg-sky-500/10 px-2 py-0.5 text-[10px] text-sky-400">
-                  🔁 شهري متكرر
+                  🔁 {t("billing.monthly")}
                 </span>
               ) : (
                 <span className="rounded-full bg-zinc-800/60 px-2 py-0.5 text-[10px] text-zinc-500">
-                  لمرة واحدة
+                  {t("billing.one_time")}
                 </span>
               )}
             </div>
             <h1 className="mt-1 text-2xl font-bold text-zinc-100">{project.title}</h1>
             {project.client && (
               <div className="mt-1 text-sm text-zinc-400">
-                العميل: {project.client.name}
+                {t("projects.field.client")}: {project.client.name}
               </div>
             )}
             {project.description && (
@@ -159,31 +160,43 @@ export default async function ProjectDetailPage(props: {
         <div className="grid grid-cols-2 gap-3 border-t border-zinc-800 pt-3 md:grid-cols-4">
           <Stat
             icon={DollarSign}
-            label={project.billingType === "monthly" ? "الميزانية الشهرية" : "الميزانية"}
-            value={formatQar(project.budgetQar)}
-            subtext={project.billingType === "monthly" ? "كل شهر" : undefined}
+            label={project.billingType === "monthly" ? t("projects.monthlyBudget") : t("projects.budget")}
+            value={formatQar(project.budgetQar, { locale })}
+            subtext={project.billingType === "monthly" ? t("projects.perMonthSubtext") : undefined}
           />
           <Stat
             icon={Calendar}
-            label="Deadline"
-            value={formatDate(project.deadlineAt)}
+            label={t("projects.deadline")}
+            value={formatDate(project.deadlineAt, locale)}
             tone={overdue ? "danger" : undefined}
           />
           <Stat
             icon={UsersIcon}
-            label="الفريق"
-            value={`${project.members.length} موظف`}
+            label={t("kpi.teamSize")}
+            value={`${project.members.length} ${t("common.activeEmployees")}`}
           />
           <Stat
-            label="التقدم"
+            label={t("projects.progressLabel")}
             value={`${project.progressPct}%`}
-            subtext={`${tasksDone}/${project.tasks.length} مهام مكتملة`}
+            subtext={`${tasksDone}/${project.tasks.length} ${t("tasks.tasksCompletedShort")}`}
             tone={tasksOverdue > 0 ? "danger" : undefined}
           />
         </div>
         {tasksOverdue > 0 && (
           <div className="mt-3 rounded-lg border border-rose-500/30 bg-rose-500/5 px-3 py-1.5 text-xs text-rose-400">
-            ⚠ {tasksOverdue} مهمة متأخرة في هذا المشروع
+            ⚠ {tasksOverdue} {t("projects.overdueTasksMsg")}
+          </div>
+        )}
+
+        {project.billingType === "monthly" && project.nextInvoiceDueAt && (
+          <div className="mt-3">
+            <InvoiceBadge
+              projectId={project.id}
+              budgetQar={project.budgetQar}
+              nextInvoiceDueAt={project.nextInvoiceDueAt}
+              locale={locale}
+              size="full"
+            />
           </div>
         )}
       </div>
@@ -191,7 +204,9 @@ export default async function ProjectDetailPage(props: {
       {/* Members */}
       <section>
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-lg font-semibold">الفريق ({project.members.length})</h2>
+          <h2 className="text-lg font-semibold">
+            {t("kpi.teamSize")} ({project.members.length})
+          </h2>
           {canManage && (
             <ProjectMembersManager
               projectId={project.id}
@@ -206,7 +221,7 @@ export default async function ProjectDetailPage(props: {
         </div>
         {project.members.length === 0 ? (
           <div className="rounded-xl border border-dashed border-zinc-800 p-6 text-center text-sm text-zinc-500">
-            ما تم تعيين أحد بعد
+            {t("projects.noMembers")}
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -234,17 +249,17 @@ export default async function ProjectDetailPage(props: {
       <section>
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-lg font-semibold">
-            المهام ({project.tasks.length})
+            {t("page.tasks.title")} ({project.tasks.length})
           </h2>
           <NewTaskButton
             users={allUsers.map((u) => ({ id: u.id, name: u.name, email: u.email }))}
             defaultProjectId={project.id}
-            label="+ مهمة للمشروع"
+            label={t("projects.addTaskToProject")}
           />
         </div>
         {project.tasks.length === 0 ? (
           <div className="rounded-xl border border-dashed border-zinc-800 p-8 text-center text-sm text-zinc-500">
-            ما فيه مهام بعد — اضغط "+ مهمة للمشروع"
+            {t("projects.noTasksYet")}
           </div>
         ) : (
           <KanbanBoard

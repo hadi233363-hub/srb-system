@@ -306,7 +306,7 @@ export default async function FinancePage(props: {
             </p>
           </div>
         ) : (
-          <div className="overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900/40">
+          <div className="overflow-x-auto rounded-xl border border-zinc-800 bg-zinc-900/40">
             <table className="w-full text-sm">
               <thead className="border-b border-zinc-800 bg-zinc-900/60 text-xs text-zinc-500">
                 <tr>

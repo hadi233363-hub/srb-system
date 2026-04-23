@@ -14,20 +14,21 @@ import { prisma } from "@/lib/db/prisma";
 import { auth } from "@/auth";
 import { cn } from "@/lib/cn";
 import {
-  ROLE_LABEL,
   PROJECT_STATUS_COLOR,
-  PROJECT_STATUS_LABEL,
   formatDate,
   formatQar,
   isOverdue,
 } from "@/lib/db/helpers";
 import { KanbanBoard } from "@/components/tasks/kanban-board";
+import { getLocale } from "@/lib/i18n/server";
+import { translate } from "@/lib/i18n/dict";
 
 export default async function EmployeeDetailPage(props: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = await props.params;
-  const session = await auth();
+  const [session, locale] = await Promise.all([auth(), getLocale()]);
+  const t = (key: string) => translate(key, locale);
   const isAdmin = session?.user.role === "admin";
 
   const user = await prisma.user.findUnique({
@@ -128,7 +129,7 @@ export default async function EmployeeDetailPage(props: {
         className="inline-flex items-center gap-1 text-xs text-zinc-500 hover:text-zinc-300"
       >
         <ArrowRight className="h-3 w-3" />
-        كل الفريق
+        {t("team.allTeam")}
       </Link>
 
       {/* Profile */}
@@ -141,11 +142,11 @@ export default async function EmployeeDetailPage(props: {
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="text-2xl font-bold text-zinc-100">{user.name}</h1>
               <span className={cn("rounded-full border px-2 py-0.5 text-[10px]", roleColor)}>
-                {ROLE_LABEL[user.role] ?? user.role}
+                {t(`role.${user.role}`) ?? user.role}
               </span>
               {!user.active && (
                 <span className="rounded-full bg-zinc-800 px-2 py-0.5 text-[10px] text-zinc-500">
-                  معطّل
+                  {t("team.label.disabled")}
                 </span>
               )}
             </div>
@@ -169,13 +170,14 @@ export default async function EmployeeDetailPage(props: {
               {user.hiredAt && (
                 <span className="flex items-center gap-1.5">
                   <Calendar className="h-3 w-3" />
-                  تم التوظيف: {formatDate(user.hiredAt)}
+                  {t("team.hiredLabel")}: {formatDate(user.hiredAt, locale)}
                 </span>
               )}
               {isAdmin && user.salaryQar && (
                 <span className="flex items-center gap-1.5 text-emerald-400">
                   <DollarSign className="h-3 w-3" />
-                  {formatQar(user.salaryQar)}/شهر
+                  {formatQar(user.salaryQar, { locale })}
+                  {t("team.salarySuffix.ar")}
                 </span>
               )}
             </div>
@@ -184,22 +186,22 @@ export default async function EmployeeDetailPage(props: {
 
         {/* Stats */}
         <div className="mt-5 grid grid-cols-2 gap-3 border-t border-zinc-800 pt-4 md:grid-cols-4">
-          <Stat icon={Briefcase} label="مشاريع نشطة" value={String(activeProjects.length)} />
+          <Stat icon={Briefcase} label={t("kpi.activeProjects")} value={String(activeProjects.length)} />
           <Stat
             icon={KanbanSquare}
-            label="مهام مفتوحة"
+            label={t("kpi.openTasks")}
             value={String(openTasks.length)}
           />
           <Stat
             icon={AlertCircle}
-            label="متأخرة"
+            label={t("kpi.overdueTasks")}
             value={String(overdueTasks.length)}
             tone={overdueTasks.length > 0 ? "danger" : undefined}
           />
           <Stat
-            label="ساعات مقدّرة"
+            label={t("team.estimatedHours")}
             value={`${totalEstimated}h`}
-            subtext={`${doneTasks.length} مكتملة`}
+            subtext={t("team.completedCount").replace("{n}", String(doneTasks.length))}
           />
         </div>
       </div>
@@ -207,11 +209,11 @@ export default async function EmployeeDetailPage(props: {
       {/* Projects the user is in */}
       <section>
         <h2 className="mb-3 text-lg font-semibold">
-          المشاريع ({user.memberships.length})
+          {t("team.projectsCount").replace("{n}", String(user.memberships.length))}
         </h2>
         {user.memberships.length === 0 ? (
           <div className="rounded-xl border border-dashed border-zinc-800 p-6 text-center text-sm text-zinc-500">
-            ما تم تعيينه في أي مشروع بعد
+            {t("team.noMemberAssigned")}
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
@@ -238,11 +240,11 @@ export default async function EmployeeDetailPage(props: {
                       PROJECT_STATUS_COLOR[m.project.status]
                     )}
                   >
-                    {PROJECT_STATUS_LABEL[m.project.status]}
+                    {t(`projectStatus.${m.project.status}`)}
                   </span>
                 </div>
                 <div className="mt-2 text-[11px] text-zinc-500">
-                  دوره: {m.role || "عضو"}
+                  {t("team.member.role")}: {m.role || t("team.member.default")}
                 </div>
                 <div className="mt-1 h-1 overflow-hidden rounded-full bg-zinc-800">
                   <div
@@ -252,7 +254,7 @@ export default async function EmployeeDetailPage(props: {
                 </div>
                 {m.project.deadlineAt && (
                   <div className="mt-1 text-[10px] text-zinc-600 tabular-nums">
-                    Deadline: {formatDate(m.project.deadlineAt)}
+                    {t("projects.deadline")}: {formatDate(m.project.deadlineAt, locale)}
                   </div>
                 )}
               </Link>
@@ -265,15 +267,15 @@ export default async function EmployeeDetailPage(props: {
       <section>
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-lg font-semibold">
-            المهام ({allTasks.length})
+            {t("team.tasksCount").replace("{n}", String(allTasks.length))}
           </h2>
           <div className="text-xs text-zinc-500">
-            اضغط على أي مهمة لتعديل أو نقلها لموظف آخر
+            {t("team.tasks.hint")}
           </div>
         </div>
         {allTasks.length === 0 ? (
           <div className="rounded-xl border border-dashed border-zinc-800 p-8 text-center text-sm text-zinc-500">
-            ما عنده مهام مفتوحة
+            {t("team.tasks.none")}
           </div>
         ) : (
           <KanbanBoard

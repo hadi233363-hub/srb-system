@@ -1,5 +1,8 @@
 import { signIn, auth } from "@/auth";
 import { redirect } from "next/navigation";
+import { prisma } from "@/lib/db/prisma";
+import { getLocale } from "@/lib/i18n/server";
+import { translate } from "@/lib/i18n/dict";
 
 type PageProps = {
   searchParams: Promise<{ from?: string; error?: string }>;
@@ -11,30 +14,39 @@ export default async function LoginPage({ searchParams }: PageProps) {
     redirect("/");
   }
 
+  const [locale, settings] = await Promise.all([
+    getLocale(),
+    prisma.appSetting.findUnique({ where: { id: 1 } }).catch(() => null),
+  ]);
+  const t = (key: string) => translate(key, locale);
+  const logoPath = settings?.logoPath ?? "/srb-logo-white.png";
+
   const { from, error } = await searchParams;
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-950 p-4">
+    <div className="flex min-h-dvh items-center justify-center bg-zinc-950 p-4">
       <div className="w-full max-w-md overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900/60 shadow-xl">
         <div className="space-y-1 border-b border-zinc-800 bg-gradient-to-b from-zinc-900/80 to-zinc-900/40 p-6 text-center">
-          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/10 text-lg font-bold text-emerald-400">
-            S
+          <div
+            className="mx-auto mb-3 rounded-2xl px-4 py-3"
+            style={{ background: "var(--color-brand-dim)", width: "fit-content" }}
+          >
+            <img
+              src={logoPath}
+              alt="SRB"
+              className="h-10 w-auto"
+            />
           </div>
-          <h1 className="text-xl font-bold text-zinc-100">SRB — تسجيل الدخول</h1>
-          <p className="text-xs text-zinc-500">
-            نظام إدارة الوكالة الداخلي
-          </p>
+          <h1 className="text-xl font-bold text-zinc-100">{t("login.title")}</h1>
+          <p className="text-xs text-zinc-500">{t("login.subtitle")}</p>
         </div>
 
         <div className="space-y-4 p-6">
-          <p className="text-sm text-zinc-400">
-            سجّل دخول بحساب جوجل اللي أضافك المدير بالنظام. لو ما عندك صلاحية،
-            كلّم المدير.
-          </p>
+          <p className="text-sm text-zinc-400">{t("login.body")}</p>
 
           {error === "AccessDenied" && (
             <div className="rounded-lg border border-rose-900/40 bg-rose-950/30 p-3 text-xs text-rose-300">
-              ⚠ الإيميل مب مسموح له الدخول. تأكد أن المدير أضافك للنظام.
+              ⚠ {t("pending.disabled")}
             </div>
           )}
 
@@ -72,7 +84,7 @@ export default async function LoginPage({ searchParams }: PageProps) {
           </form>
 
           <div className="border-t border-zinc-800 pt-3 text-center text-[11px] text-zinc-600">
-            استخدام داخلي لوكالة SRB فقط
+            {t("login.internalOnly")}
           </div>
         </div>
       </div>

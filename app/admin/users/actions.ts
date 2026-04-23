@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { auth } from "@/auth";
 import {
   createUser,
   deleteUser,
@@ -9,14 +8,18 @@ import {
   findUserByEmail,
 } from "@/lib/db/users";
 import { prisma } from "@/lib/db/prisma";
+import { logAudit } from "@/lib/db/audit";
+import { requireAdmin as requireAdminUser } from "@/lib/auth-guards";
 
 type Role = "admin" | "manager" | "employee";
 
 async function requireAdmin() {
-  const session = await auth();
-  if (!session?.user) throw new Error("Not authenticated");
-  if (session.user.role !== "admin") throw new Error("Admin only");
-  return session;
+  const user = await requireAdminUser();
+  return { user };
+}
+
+function userLabel(u: { name: string; email: string }) {
+  return `${u.name} · ${u.email}`;
 }
 
 export async function addUserAction(formData: FormData) {
@@ -43,20 +46,40 @@ export async function addUserAction(formData: FormData) {
     where: { id: user.id },
     data: { approvedAt: new Date() },
   });
+  await logAudit({
+    action: "user.create",
+    target: { type: "user", id: user.id, label: userLabel(user) },
+    metadata: { role, department },
+  });
   revalidatePath("/admin/users");
   return { ok: true, message: `تم إضافة ${name}` };
 }
 
 export async function toggleUserActiveAction(id: string, active: boolean) {
   await requireAdmin();
+  const before = await prisma.user.findUnique({ where: { id } });
   await updateUser(id, { active });
+  if (before) {
+    await logAudit({
+      action: active ? "user.activate" : "user.deactivate",
+      target: { type: "user", id, label: userLabel(before) },
+    });
+  }
   revalidatePath("/admin/users");
   return { ok: true };
 }
 
 export async function changeUserRoleAction(id: string, role: Role) {
   await requireAdmin();
+  const before = await prisma.user.findUnique({ where: { id } });
   await updateUser(id, { role });
+  if (before) {
+    await logAudit({
+      action: "user.role_change",
+      target: { type: "user", id, label: userLabel(before) },
+      metadata: { from: before.role, to: role },
+    });
+  }
   revalidatePath("/admin/users");
   return { ok: true };
 }
@@ -66,7 +89,15 @@ export async function deleteUserAction(id: string) {
   if (session.user.id === id) {
     return { ok: false, message: "ما تقدر تحذف حسابك" };
   }
+  const before = await prisma.user.findUnique({ where: { id } });
   await deleteUser(id);
+  if (before) {
+    await logAudit({
+      action: "user.delete",
+      target: { type: "user", id, label: userLabel(before) },
+      metadata: { role: before.role, department: before.department },
+    });
+  }
   revalidatePath("/admin/users");
   return { ok: true };
 }
@@ -81,7 +112,7 @@ export async function approveUserAction(
   if (!["admin", "manager", "employee"].includes(role)) {
     return { ok: false, message: "الدور غير صحيح" };
   }
-  await prisma.user.update({
+  const updated = await prisma.user.update({
     where: { id },
     data: {
       active: true,
@@ -89,6 +120,11 @@ export async function approveUserAction(
       role,
       department: department?.trim() || null,
     },
+  });
+  await logAudit({
+    action: "user.approve",
+    target: { type: "user", id, label: userLabel(updated) },
+    metadata: { role, department: department?.trim() || null },
   });
   revalidatePath("/admin/users");
   return { ok: true };
@@ -101,7 +137,14 @@ export async function rejectUserAction(id: string) {
   if (session.user.id === id) {
     return { ok: false, message: "ما تقدر تحذف حسابك" };
   }
+  const before = await prisma.user.findUnique({ where: { id } });
   await prisma.user.delete({ where: { id } });
+  if (before) {
+    await logAudit({
+      action: "user.reject",
+      target: { type: "user", id, label: userLabel(before) },
+    });
+  }
   revalidatePath("/admin/users");
   return { ok: true };
 }

@@ -13,6 +13,7 @@ import { cn } from "@/lib/cn";
 import { NewProjectButton } from "./new-project-button";
 import { getLocale } from "@/lib/i18n/server";
 import { translate } from "@/lib/i18n/dict";
+import { InvoiceBadge } from "@/components/projects/invoice-badge";
 
 export default async function ProjectsPage() {
   const [session, locale] = await Promise.all([auth(), getLocale()]);
@@ -175,6 +176,18 @@ export default async function ProjectsPage() {
                     </span>
                   )}
                 </div>
+
+                {p.billingType === "monthly" && p.nextInvoiceDueAt && (
+                  <div className="mt-2 flex justify-end">
+                    <InvoiceBadge
+                      projectId={p.id}
+                      budgetQar={p.budgetQar}
+                      nextInvoiceDueAt={p.nextInvoiceDueAt}
+                      locale={locale}
+                      size="compact"
+                    />
+                  </div>
+                )}
               </Link>
             );
           })}

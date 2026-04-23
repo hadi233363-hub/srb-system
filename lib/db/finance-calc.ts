@@ -171,7 +171,11 @@ export function computeFinanceSummary(args: {
     }
   }
 
-  // Monthly-billed projects contribute their budget each active month.
+  // Monthly-billed projects contribute their budget each active month — but we
+  // must not double-count invoices the user has actually collected via
+  // recordInvoiceAction (those are already in oneTimeIncome above, as
+  // recurrence="none" income transactions with category="project_payment").
+  // For each project we project only the REMAINING expected cycles.
   let projectMonthlyIncome = 0;
   let monthlyProjectIncome = 0;
   for (const p of args.projects) {
@@ -186,7 +190,17 @@ export function computeFinanceSummary(args: {
       end,
       periodMonths
     );
-    projectMonthlyIncome += p.budgetQar * occurrences;
+    const actualCollectedInRange = args.transactions.filter(
+      (tx) =>
+        tx.projectId === p.id &&
+        tx.kind === "income" &&
+        tx.category === "project_payment" &&
+        (tx.recurrence ?? "none") === "none" &&
+        tx.occurredAt >= start &&
+        tx.occurredAt <= end
+    ).length;
+    const remaining = Math.max(0, occurrences - actualCollectedInRange);
+    projectMonthlyIncome += p.budgetQar * remaining;
     if (p.status === "active" || p.status === "on_hold") {
       monthlyProjectIncome += p.budgetQar;
     }

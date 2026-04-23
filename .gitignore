@@ -41,9 +41,14 @@ auth.db-*
 # Prisma SQLite runtime (local dev + Railway volume keep their own copy)
 prisma/app.db
 prisma/app.db-*
+prisma/app.db.*
 prisma/migrations/
 app.db
 app.db-*
+
+# Local/manual DB backup files — stay on disk, never commit (contain live data)
+backups/
+*.db.pre-deploy-backup
 
 # vercel
 .vercel

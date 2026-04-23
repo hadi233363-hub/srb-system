@@ -1,21 +1,26 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { auth } from "@/auth";
 import { prisma } from "@/lib/db/prisma";
-
-async function requireAuth() {
-  const session = await auth();
-  if (!session?.user) throw new Error("Not authenticated");
-  return session.user;
-}
+import { logAudit } from "@/lib/db/audit";
+import { requireActiveUser as requireAuth } from "@/lib/auth-guards";
+import {
+  safeString,
+  MAX_LONG_TEXT,
+  MAX_TITLE_LEN,
+} from "@/lib/input-limits";
 
 export async function createTaskAction(formData: FormData) {
   const user = await requireAuth();
 
-  const title = (formData.get("title") as string | null)?.trim();
-  const description =
-    (formData.get("description") as string | null)?.trim() || null;
+  let title: string | null;
+  let description: string | null;
+  try {
+    title = safeString(formData.get("title"), MAX_TITLE_LEN);
+    description = safeString(formData.get("description"), MAX_LONG_TEXT);
+  } catch (err) {
+    return { ok: false, message: err instanceof Error ? err.message : "إدخال غير صحيح" };
+  }
   const projectId = (formData.get("projectId") as string | null) || null;
   const assigneeId = (formData.get("assigneeId") as string | null) || null;
   const priority = (formData.get("priority") as string | null) || "normal";
@@ -50,6 +55,12 @@ export async function createTaskAction(formData: FormData) {
       type: "created",
       toValue: status,
     },
+  });
+
+  await logAudit({
+    action: "task.create",
+    target: { type: "task", id: task.id, label: task.title },
+    metadata: { projectId, assigneeId, priority, status },
   });
 
   revalidatePath("/tasks");
@@ -191,6 +202,13 @@ export async function deleteTaskAction(id: string) {
   await requireAuth();
   const task = await prisma.task.findUnique({ where: { id } });
   await prisma.task.delete({ where: { id } });
+  if (task) {
+    await logAudit({
+      action: "task.delete",
+      target: { type: "task", id, label: task.title },
+      metadata: { projectId: task.projectId, status: task.status },
+    });
+  }
   revalidatePath("/tasks");
   if (task?.projectId) revalidatePath(`/projects/${task.projectId}`);
   return { ok: true };

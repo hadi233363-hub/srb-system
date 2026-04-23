@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Plus, X } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { createProjectAction } from "./actions";
+import { useT } from "@/lib/i18n/client";
 
 interface User {
   id: string;
@@ -14,9 +15,11 @@ interface User {
 }
 
 export function NewProjectButton({ users }: { users: User[] }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [billingType, setBillingType] = useState<"one_time" | "monthly">("one_time");
   const formRef = useRef<HTMLFormElement>(null);
   const router = useRouter();
 
@@ -27,9 +30,10 @@ export function NewProjectButton({ users }: { users: User[] }) {
       if (res.ok && res.id) {
         setOpen(false);
         formRef.current?.reset();
+        setBillingType("one_time");
         router.push(`/projects/${res.id}`);
       } else {
-        setError(res.message ?? "حدث خطأ");
+        setError(res.message ?? t("common.errorGeneric"));
       }
     });
   };
@@ -41,7 +45,7 @@ export function NewProjectButton({ users }: { users: User[] }) {
         className="flex items-center gap-2 rounded-lg bg-emerald-500 px-3 py-1.5 text-sm font-semibold text-emerald-950 transition hover:bg-emerald-400"
       >
         <Plus className="h-4 w-4" />
-        مشروع جديد
+        {t("action.newProject")}
       </button>
 
       {open && (
@@ -51,7 +55,7 @@ export function NewProjectButton({ users }: { users: User[] }) {
         >
           <div className="w-full max-w-lg rounded-2xl border border-zinc-800 bg-zinc-900 p-5 shadow-2xl">
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-lg font-bold">مشروع جديد</h3>
+              <h3 className="text-lg font-bold">{t("projects.new.title")}</h3>
               <button
                 onClick={() => setOpen(false)}
                 className="text-zinc-500 hover:text-zinc-300"
@@ -71,49 +75,49 @@ export function NewProjectButton({ users }: { users: User[] }) {
               action={onSubmit}
               className="grid grid-cols-1 gap-3 sm:grid-cols-2"
             >
-              <Field label="اسم المشروع *" full>
+              <Field label={t("projects.field.title")} full>
                 <input
                   name="title"
                   required
-                  placeholder="مثال: حملة رمضان لبنك قطر"
+                  placeholder={t("projects.field.titlePlaceholder")}
                   className="w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 focus:border-emerald-500/50 focus:outline-none"
                 />
               </Field>
-              <Field label="العميل">
+              <Field label={t("projects.field.client")}>
                 <input
                   name="clientName"
-                  placeholder="بنك قطر الوطني"
+                  placeholder={t("projects.field.clientPlaceholder")}
                   className="w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 focus:border-emerald-500/50 focus:outline-none"
                 />
               </Field>
-              <Field label="نوع المشروع">
+              <Field label={t("projects.field.type")}>
                 <select
                   name="type"
                   defaultValue=""
                   className="w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 focus:border-emerald-500/50 focus:outline-none"
                 >
                   <option value="">—</option>
-                  <option value="video">فيديو</option>
-                  <option value="photo">تصوير</option>
-                  <option value="event">فعالية</option>
-                  <option value="digital_campaign">حملة رقمية</option>
-                  <option value="web">ويب</option>
-                  <option value="other">غير ذلك</option>
+                  <option value="video">{t("projectType.video")}</option>
+                  <option value="photo">{t("projectType.photo")}</option>
+                  <option value="event">{t("projectType.event")}</option>
+                  <option value="digital_campaign">{t("projectType.digital_campaign")}</option>
+                  <option value="web">{t("projectType.web")}</option>
+                  <option value="other">{t("projectType.other")}</option>
                 </select>
               </Field>
-              <Field label="الأولوية">
+              <Field label={t("projects.field.priority")}>
                 <select
                   name="priority"
                   defaultValue="normal"
                   className="w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 focus:border-emerald-500/50 focus:outline-none"
                 >
-                  <option value="low">منخفضة</option>
-                  <option value="normal">عادية</option>
-                  <option value="high">مرتفعة</option>
-                  <option value="urgent">عاجلة</option>
+                  <option value="low">{t("priority.low")}</option>
+                  <option value="normal">{t("priority.normal")}</option>
+                  <option value="high">{t("priority.high")}</option>
+                  <option value="urgent">{t("priority.urgent")}</option>
                 </select>
               </Field>
-              <Field label="نوع التسعير *" full>
+              <Field label={t("projects.field.billingType")} full>
                 <div className="grid grid-cols-2 gap-2">
                   <label className="cursor-pointer rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm has-[:checked]:border-emerald-500/40 has-[:checked]:bg-emerald-500/10 has-[:checked]:text-emerald-400">
                     <input
@@ -121,22 +125,41 @@ export function NewProjectButton({ users }: { users: User[] }) {
                       name="billingType"
                       value="one_time"
                       defaultChecked
+                      onChange={() => setBillingType("one_time")}
                       className="ml-2 accent-emerald-500"
                     />
-                    مرة واحدة (مشروع منتهي بميزانية واحدة)
+                    {t("billing.one_time")}
                   </label>
                   <label className="cursor-pointer rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm has-[:checked]:border-emerald-500/40 has-[:checked]:bg-emerald-500/10 has-[:checked]:text-emerald-400">
                     <input
                       type="radio"
                       name="billingType"
                       value="monthly"
+                      onChange={() => setBillingType("monthly")}
                       className="ml-2 accent-emerald-500"
                     />
-                    شهري متكرر (الميزانية تُحتسب كل شهر)
+                    {t("billing.monthly")}
                   </label>
                 </div>
               </Field>
-              <Field label="الميزانية (ر.ق)">
+              {billingType === "monthly" && (
+                <Field label={t("projects.field.billingCycleDays")} full>
+                  <div className="flex items-center gap-2">
+                    <input
+                      name="billingCycleDays"
+                      type="number"
+                      min={1}
+                      max={365}
+                      defaultValue={30}
+                      className="w-24 rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 focus:border-emerald-500/50 focus:outline-none"
+                    />
+                    <span className="text-xs text-zinc-500">
+                      {t("projects.field.billingCycleHint")}
+                    </span>
+                  </div>
+                </Field>
+              )}
+              <Field label={t("projects.field.budget")}>
                 <input
                   name="budgetQar"
                   type="number"
@@ -145,24 +168,21 @@ export function NewProjectButton({ users }: { users: User[] }) {
                   placeholder="50000"
                   className="w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 focus:border-emerald-500/50 focus:outline-none"
                 />
-                <div className="mt-0.5 text-[10px] text-zinc-600">
-                  للمشاريع الشهرية: هذي قيمة الدفعة الشهرية
-                </div>
               </Field>
-              <Field label="الـ deadline">
+              <Field label={t("projects.field.deadline")}>
                 <input
                   name="deadlineAt"
                   type="date"
                   className="w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 focus:border-emerald-500/50 focus:outline-none"
                 />
               </Field>
-              <Field label="المسؤول (Lead)" full>
+              <Field label={t("projects.field.lead")} full>
                 <select
                   name="leadId"
                   defaultValue=""
                   className="w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 focus:border-emerald-500/50 focus:outline-none"
                 >
-                  <option value="">أنا</option>
+                  <option value="">{t("tasks.unassigned")}</option>
                   {users.map((u) => (
                     <option key={u.id} value={u.id}>
                       {u.name} ({u.email})
@@ -170,11 +190,11 @@ export function NewProjectButton({ users }: { users: User[] }) {
                   ))}
                 </select>
               </Field>
-              <Field label="وصف مختصر" full>
+              <Field label={t("projects.field.description")} full>
                 <textarea
                   name="description"
                   rows={3}
-                  placeholder="اختياري — تفاصيل المشروع"
+                  placeholder={t("projects.field.descPlaceholder")}
                   className="w-full resize-none rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 focus:border-emerald-500/50 focus:outline-none"
                 />
               </Field>
@@ -185,14 +205,14 @@ export function NewProjectButton({ users }: { users: User[] }) {
                   onClick={() => setOpen(false)}
                   className="rounded-md border border-zinc-800 px-3 py-1.5 text-xs text-zinc-400 hover:bg-zinc-800"
                 >
-                  إلغاء
+                  {t("action.cancel")}
                 </button>
                 <button
                   type="submit"
                   disabled={isPending}
                   className="rounded-md bg-emerald-500 px-4 py-1.5 text-sm font-semibold text-emerald-950 hover:bg-emerald-400 disabled:opacity-60"
                 >
-                  {isPending ? "يُنشئ..." : "إنشاء المشروع"}
+                  {isPending ? t("action.creating") : t("projects.create")}
                 </button>
               </div>
             </form>

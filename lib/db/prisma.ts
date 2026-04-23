@@ -13,5 +13,7 @@ if (process.env.NODE_ENV !== "production") {
 }
 
 // SQLite tuning for better concurrency + write performance.
-void prisma.$executeRawUnsafe("PRAGMA journal_mode = WAL;").catch(() => {});
-void prisma.$executeRawUnsafe("PRAGMA busy_timeout = 5000;").catch(() => {});
+// NOTE: PRAGMA statements return a result row, so $queryRawUnsafe is required.
+// $executeRawUnsafe throws "Execute returned results, which is not allowed in SQLite."
+void prisma.$queryRawUnsafe("PRAGMA journal_mode = WAL;").catch(() => {});
+void prisma.$queryRawUnsafe("PRAGMA busy_timeout = 5000;").catch(() => {});

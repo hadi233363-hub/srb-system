@@ -4,6 +4,7 @@ import { useRef, useState, useTransition } from "react";
 import { MoreVertical, Settings2, Trash2, X } from "lucide-react";
 import { deleteProjectAction, updateProjectAction } from "../actions";
 import { cn } from "@/lib/cn";
+import { useT } from "@/lib/i18n/client";
 
 interface Props {
   projectId: string;
@@ -28,6 +29,7 @@ export function ProjectActionsMenu({
   currentDescription,
   currentBillingType,
 }: Props) {
+  const t = useT();
   const [editOpen, setEditOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -45,13 +47,13 @@ export function ProjectActionsMenu({
         const res = await updateProjectAction(projectId, formData);
         if (res.ok) setEditOpen(false);
       } catch (e) {
-        setError(e instanceof Error ? e.message : "خطأ");
+        setError(e instanceof Error ? e.message : t("common.error"));
       }
     });
   };
 
   const onDelete = () => {
-    if (!confirm("تحذف المشروع نهائياً؟ كل المهام والأعضاء بتتحذف معاه.")) return;
+    if (!confirm(t("projects.deleteConfirm"))) return;
     startTransition(async () => {
       await deleteProjectAction(projectId);
     });
@@ -81,7 +83,7 @@ export function ProjectActionsMenu({
                 className="flex w-full items-center gap-2 px-3 py-2 text-right text-xs text-zinc-300 hover:bg-zinc-800"
               >
                 <Settings2 className="h-3.5 w-3.5" />
-                تعديل المشروع
+                {t("projects.edit")}
               </button>
               <button
                 onClick={() => {
@@ -91,7 +93,7 @@ export function ProjectActionsMenu({
                 className="flex w-full items-center gap-2 px-3 py-2 text-right text-xs text-rose-400 hover:bg-rose-500/10"
               >
                 <Trash2 className="h-3.5 w-3.5" />
-                حذف المشروع
+                {t("projects.delete")}
               </button>
             </div>
           </>
@@ -105,7 +107,7 @@ export function ProjectActionsMenu({
         >
           <div className="w-full max-w-lg rounded-2xl border border-zinc-800 bg-zinc-900 p-5 shadow-2xl">
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-lg font-bold">تعديل المشروع</h3>
+              <h3 className="text-lg font-bold">{t("projects.edit")}</h3>
               <button
                 onClick={() => setEditOpen(false)}
                 className="text-zinc-500 hover:text-zinc-300"
@@ -123,38 +125,38 @@ export function ProjectActionsMenu({
               action={onSubmit}
               className="grid grid-cols-1 gap-3 sm:grid-cols-2"
             >
-              <Field label="اسم المشروع" full>
+              <Field label={t("projects.field.title")} full>
                 <input
                   name="title"
                   defaultValue={currentTitle}
                   className="w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 focus:border-emerald-500/50 focus:outline-none"
                 />
               </Field>
-              <Field label="الحالة">
+              <Field label={t("tasks.field.status")}>
                 <select
                   name="status"
                   defaultValue={currentStatus}
                   className="w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 focus:border-emerald-500/50 focus:outline-none"
                 >
-                  <option value="active">نشط</option>
-                  <option value="on_hold">موقّف مؤقتاً</option>
-                  <option value="completed">مكتمل</option>
-                  <option value="cancelled">ملغي</option>
+                  <option value="active">{t("projectStatus.active")}</option>
+                  <option value="on_hold">{t("projectStatus.on_hold")}</option>
+                  <option value="completed">{t("projectStatus.completed")}</option>
+                  <option value="cancelled">{t("projectStatus.cancelled")}</option>
                 </select>
               </Field>
-              <Field label="الأولوية">
+              <Field label={t("projects.field.priority")}>
                 <select
                   name="priority"
                   defaultValue={currentPriority}
                   className="w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 focus:border-emerald-500/50 focus:outline-none"
                 >
-                  <option value="low">منخفضة</option>
-                  <option value="normal">عادية</option>
-                  <option value="high">مرتفعة</option>
-                  <option value="urgent">عاجلة</option>
+                  <option value="low">{t("priority.low")}</option>
+                  <option value="normal">{t("priority.normal")}</option>
+                  <option value="high">{t("priority.high")}</option>
+                  <option value="urgent">{t("priority.urgent")}</option>
                 </select>
               </Field>
-              <Field label="الميزانية">
+              <Field label={t("projects.field.budget")}>
                 <input
                   name="budgetQar"
                   type="number"
@@ -164,17 +166,17 @@ export function ProjectActionsMenu({
                   className="w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 focus:border-emerald-500/50 focus:outline-none"
                 />
               </Field>
-              <Field label="نوع التسعير">
+              <Field label={t("projects.field.billingType")}>
                 <select
                   name="billingType"
                   defaultValue={currentBillingType}
                   className="w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 focus:border-emerald-500/50 focus:outline-none"
                 >
-                  <option value="one_time">مرة واحدة</option>
-                  <option value="monthly">شهري متكرر</option>
+                  <option value="one_time">{t("billing.one_time")}</option>
+                  <option value="monthly">{t("billing.monthly")}</option>
                 </select>
               </Field>
-              <Field label="Deadline">
+              <Field label={t("projects.field.deadline")}>
                 <input
                   name="deadlineAt"
                   type="date"
@@ -182,7 +184,7 @@ export function ProjectActionsMenu({
                   className="w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 focus:border-emerald-500/50 focus:outline-none"
                 />
               </Field>
-              <Field label={`التقدم % (${currentProgress}%)`} full>
+              <Field label={`${t("projects.progressLabel")} (${currentProgress}%)`} full>
                 <input
                   name="progressPct"
                   type="range"
@@ -192,7 +194,7 @@ export function ProjectActionsMenu({
                   className="w-full"
                 />
               </Field>
-              <Field label="الوصف" full>
+              <Field label={t("projects.field.description")} full>
                 <textarea
                   name="description"
                   rows={3}
@@ -206,14 +208,14 @@ export function ProjectActionsMenu({
                   onClick={() => setEditOpen(false)}
                   className="rounded-md border border-zinc-800 px-3 py-1.5 text-xs text-zinc-400 hover:bg-zinc-800"
                 >
-                  إلغاء
+                  {t("action.cancel")}
                 </button>
                 <button
                   type="submit"
                   disabled={isPending}
                   className="rounded-md bg-emerald-500 px-4 py-1.5 text-sm font-semibold text-emerald-950 hover:bg-emerald-400 disabled:opacity-60"
                 >
-                  {isPending ? "يحفظ..." : "حفظ"}
+                  {isPending ? t("action.saving") : t("action.save")}
                 </button>
               </div>
             </form>

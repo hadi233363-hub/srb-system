@@ -82,14 +82,14 @@ export function UsersAdminClient({ users, currentUserId }: Props) {
                   startTransition(async () => {
                     const res = await approveUserAction(u.id, role, dept);
                     if (res.ok) showFlash("success", t("admin.pending.approvedToast"));
-                    else showFlash("error", res.message ?? "خطأ");
+                    else showFlash("error", res.message ?? t("common.error"));
                   })
                 }
                 onReject={() =>
                   startTransition(async () => {
                     const res = await rejectUserAction(u.id);
                     if (res.ok) showFlash("success", t("admin.pending.rejectedToast"));
-                    else showFlash("error", res.message ?? "خطأ");
+                    else showFlash("error", res.message ?? t("common.error"));
                   })
                 }
               />
@@ -100,21 +100,21 @@ export function UsersAdminClient({ users, currentUserId }: Props) {
 
       <div className="flex items-center justify-between">
         <div className="text-xs text-zinc-500">
-          كل حساب يقدر يدخل بجيميل هذا الإيميل فقط · المدير يقدر يعدّل أو يحذف
+          {t("admin.users.hint")}
         </div>
         <button
           onClick={() => setAddOpen(true)}
           className="flex items-center gap-2 rounded-lg bg-emerald-500 px-3 py-1.5 text-xs font-semibold text-emerald-950 transition hover:bg-emerald-400"
         >
           <UserPlus className="h-3.5 w-3.5" />
-          إضافة موظف
+          {t("action.addEmployee")}
         </button>
       </div>
 
       {addOpen && (
         <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-5">
           <div className="mb-4 flex items-center justify-between">
-            <h4 className="text-sm font-semibold">حساب جديد</h4>
+            <h4 className="text-sm font-semibold">{t("admin.users.addTitle")}</h4>
             <button
               onClick={() => setAddOpen(false)}
               className="text-zinc-500 hover:text-zinc-300"
@@ -127,24 +127,24 @@ export function UsersAdminClient({ users, currentUserId }: Props) {
               startTransition(async () => {
                 const res = await addUserAction(formData);
                 if (res.ok) {
-                  showFlash("success", res.message ?? "تم");
+                  showFlash("success", res.message ?? t("admin.users.addedToast"));
                   setAddOpen(false);
                 } else {
-                  showFlash("error", res.message ?? "فشل الإضافة");
+                  showFlash("error", res.message ?? t("admin.users.addFailed"));
                 }
               });
             }}
             className="grid grid-cols-1 gap-3 sm:grid-cols-2"
           >
-            <Field label="الاسم">
+            <Field label={t("admin.users.field.name")}>
               <input
                 name="name"
                 required
-                placeholder="أحمد الكواري"
+                placeholder={t("admin.users.field.namePlaceholder")}
                 className="w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 focus:border-emerald-500/50 focus:outline-none"
               />
             </Field>
-            <Field label="إيميل جيميل">
+            <Field label={t("admin.users.field.email")}>
               <input
                 name="email"
                 type="email"
@@ -154,19 +154,19 @@ export function UsersAdminClient({ users, currentUserId }: Props) {
                 dir="ltr"
               />
             </Field>
-            <Field label="الدور">
+            <Field label={t("admin.users.field.role")}>
               <select
                 name="role"
                 required
                 defaultValue="employee"
                 className="w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 focus:border-emerald-500/50 focus:outline-none"
               >
-                <option value="admin">مدير — يشوف كل شي</option>
-                <option value="manager">رئيس قسم — قسمه فقط</option>
-                <option value="employee">موظف — مهامه فقط</option>
+                <option value="admin">{t("admin.users.roleOptAdmin")}</option>
+                <option value="manager">{t("admin.users.roleOptManager")}</option>
+                <option value="employee">{t("admin.users.roleOptEmployee")}</option>
               </select>
             </Field>
-            <Field label="القسم (اختياري)">
+            <Field label={t("admin.users.field.department")}>
               <input
                 name="department"
                 placeholder="Creative · Accounts · Sales · Tech"
@@ -179,14 +179,14 @@ export function UsersAdminClient({ users, currentUserId }: Props) {
                 onClick={() => setAddOpen(false)}
                 className="rounded-md border border-zinc-800 px-3 py-1.5 text-xs text-zinc-400 hover:bg-zinc-800"
               >
-                إلغاء
+                {t("action.cancel")}
               </button>
               <button
                 type="submit"
                 disabled={isPending}
                 className="rounded-md bg-emerald-500 px-4 py-1.5 text-xs font-semibold text-emerald-950 hover:bg-emerald-400 disabled:opacity-60"
               >
-                {isPending ? "يضيف..." : "أضف"}
+                {isPending ? t("action.adding") : t("admin.users.addBtn")}
               </button>
             </div>
           </form>
@@ -197,7 +197,7 @@ export function UsersAdminClient({ users, currentUserId }: Props) {
         <ul className="divide-y divide-zinc-800/60">
           {approvedUsers.length === 0 && (
             <li className="px-5 py-8 text-center text-sm text-zinc-500">
-              ما فيه حسابات بعد. اضغط "إضافة موظف" لتبدأ.
+              {t("admin.users.empty")}
             </li>
           )}
           {approvedUsers.map((u) => {
@@ -214,12 +214,12 @@ export function UsersAdminClient({ users, currentUserId }: Props) {
                     </span>
                     {isSelf && (
                       <span className="rounded-full bg-zinc-800 px-2 py-0.5 text-[10px] text-zinc-400">
-                        أنت
+                        {t("admin.users.youLabel")}
                       </span>
                     )}
                     {!u.active && (
                       <span className="rounded-full bg-zinc-800 px-2 py-0.5 text-[10px] text-zinc-500">
-                        معطّل
+                        {t("team.label.disabled")}
                       </span>
                     )}
                   </div>
@@ -235,7 +235,7 @@ export function UsersAdminClient({ users, currentUserId }: Props) {
                       <>
                         <span className="text-zinc-700">·</span>
                         <span>
-                          آخر دخول: {new Date(u.lastLoginAt).toLocaleDateString("en")}
+                          {t("admin.users.loginSince")}: {new Date(u.lastLoginAt).toLocaleDateString("en")}
                         </span>
                       </>
                     )}
@@ -274,19 +274,19 @@ export function UsersAdminClient({ users, currentUserId }: Props) {
                         : "border-emerald-500/30 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20"
                     )}
                   >
-                    {u.active ? "تعطيل" : "تفعيل"}
+                    {u.active ? t("admin.users.toggleDeactivate") : t("admin.users.toggleActivate")}
                   </button>
                   <button
                     disabled={isSelf || isPending}
                     onClick={() => {
-                      if (!confirm(`تحذف حساب ${u.name}؟`)) return;
+                      if (!confirm(`${t("admin.users.deleteConfirm")} ${u.name}`)) return;
                       startTransition(async () => {
                         const res = await deleteUserAction(u.id);
-                        if (!res.ok) showFlash("error", res.message ?? "فشل");
+                        if (!res.ok) showFlash("error", res.message ?? t("common.error"));
                       });
                     }}
                     className="rounded-md border border-rose-500/30 p-1.5 text-rose-400 transition hover:bg-rose-500/10 disabled:opacity-40"
-                    aria-label="حذف"
+                    aria-label={t("action.delete")}
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>

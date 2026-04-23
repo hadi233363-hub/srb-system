@@ -1,24 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { auth } from "@/auth";
 import { prisma } from "@/lib/db/prisma";
-
-async function requireAuth() {
-  const session = await auth();
-  if (!session?.user || !session.user.active) {
-    throw new Error("Not authenticated");
-  }
-  return session.user;
-}
-
-async function requireAdmin() {
-  const user = await requireAuth();
-  if (user.role !== "admin") {
-    throw new Error("صلاحيات غير كافية");
-  }
-  return user;
-}
+import { logAudit } from "@/lib/db/audit";
+import {
+  requireActiveUser as requireAuth,
+  requireAdmin,
+} from "@/lib/auth-guards";
+import { safeAmount, safeString, MAX_LONG_TEXT } from "@/lib/input-limits";
 
 export async function createTransactionAction(formData: FormData) {
   // Any active user can record numbers — totals stay admin-only (gated in the UI).
@@ -26,9 +15,14 @@ export async function createTransactionAction(formData: FormData) {
 
   const kind = formData.get("kind") as string | null;
   const category = formData.get("category") as string | null;
-  const amountRaw = formData.get("amountQar") as string | null;
-  const amount = amountRaw ? Math.abs(parseFloat(amountRaw)) : 0;
-  const description = (formData.get("description") as string | null)?.trim() || null;
+  let amount: number;
+  let description: string | null;
+  try {
+    amount = safeAmount(formData.get("amountQar"));
+    description = safeString(formData.get("description"), MAX_LONG_TEXT);
+  } catch (err) {
+    return { ok: false, message: err instanceof Error ? err.message : "إدخال غير صحيح" };
+  }
   const projectId = (formData.get("projectId") as string | null) || null;
   const occurredAtRaw = formData.get("occurredAt") as string | null;
   const occurredAt = occurredAtRaw ? new Date(occurredAtRaw) : new Date();
@@ -42,14 +36,14 @@ export async function createTransactionAction(formData: FormData) {
   if (!category) {
     return { ok: false, message: "الفئة مطلوبة" };
   }
-  if (!amount || isNaN(amount) || amount <= 0) {
+  if (!amount || amount <= 0) {
     return { ok: false, message: "المبلغ لازم يكون موجب" };
   }
   if (!["none", "monthly"].includes(recurrence)) {
     return { ok: false, message: "نوع التكرار غير صحيح" };
   }
 
-  await prisma.transaction.create({
+  const tx = await prisma.transaction.create({
     data: {
       kind,
       category,
@@ -63,6 +57,16 @@ export async function createTransactionAction(formData: FormData) {
     },
   });
 
+  await logAudit({
+    action: "tx.create",
+    target: {
+      type: "transaction",
+      id: tx.id,
+      label: `${kind === "income" ? "+" : "−"}${amount.toLocaleString("en")} · ${category}`,
+    },
+    metadata: { kind, category, amountQar: amount, recurrence, projectId, description },
+  });
+
   revalidatePath("/finance");
   revalidatePath("/");
   return { ok: true };
@@ -71,7 +75,28 @@ export async function createTransactionAction(formData: FormData) {
 export async function deleteTransactionAction(id: string) {
   // Only admin can delete — prevents employees from clearing their own entries.
   await requireAdmin();
+  const before = await prisma.transaction.findUnique({
+    where: { id },
+    include: { project: { select: { title: true } } },
+  });
   await prisma.transaction.delete({ where: { id } });
+  if (before) {
+    await logAudit({
+      action: "tx.delete",
+      target: {
+        type: "transaction",
+        id,
+        label: `${before.kind === "income" ? "+" : "−"}${before.amountQar.toLocaleString("en")} · ${before.category}`,
+      },
+      metadata: {
+        kind: before.kind,
+        category: before.category,
+        amountQar: before.amountQar,
+        projectTitle: before.project?.title ?? null,
+        description: before.description,
+      },
+    });
+  }
   revalidatePath("/finance");
   revalidatePath("/");
   return { ok: true };

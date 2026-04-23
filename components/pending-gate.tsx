@@ -16,7 +16,7 @@ interface Props {
 export function PendingGate({ userName, userEmail, wasPreviouslyApproved }: Props) {
   const t = useT();
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-950 p-4">
+    <div className="flex min-h-dvh items-center justify-center bg-zinc-950 p-4">
       <div className="absolute end-4 top-4">
         <LanguageSwitcher />
       </div>

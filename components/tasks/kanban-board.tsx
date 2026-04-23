@@ -5,12 +5,12 @@ import { AlertCircle, Clock, User as UserIcon, Users } from "lucide-react";
 import { cn } from "@/lib/cn";
 import {
   TASK_STATUS_COLOR,
-  TASK_STATUS_LABEL,
   PRIORITY_COLOR,
   isOverdue,
   daysUntil,
 } from "@/lib/db/helpers";
 import { updateTaskStatusAction } from "@/app/tasks/actions";
+import { useLocale, useT } from "@/lib/i18n/client";
 import { TaskDetailModal, type TaskDetail, type UserLite, type ProjectLite } from "./task-detail-modal";
 
 export interface KanbanTask extends TaskDetail {
@@ -30,6 +30,8 @@ export function KanbanBoard({ tasks, users, projects, allowProjectChange }: Prop
   const [, startTransition] = useTransition();
   const [dragging, setDragging] = useState<string | null>(null);
   const [openTask, setOpenTask] = useState<KanbanTask | null>(null);
+  const t = useT();
+  const { locale } = useLocale();
 
   const grouped: Record<string, KanbanTask[]> = {
     todo: [],
@@ -83,7 +85,7 @@ export function KanbanBoard({ tasks, users, projects, allowProjectChange }: Prop
                     )}
                   />
                   <h3 className="text-sm font-semibold text-zinc-200">
-                    {TASK_STATUS_LABEL[col]}
+                    {t(`taskStatus.${col}`)}
                   </h3>
                   <span className="rounded-full bg-zinc-800 px-1.5 py-0.5 text-[10px] text-zinc-400">
                     {items.length}
@@ -91,7 +93,7 @@ export function KanbanBoard({ tasks, users, projects, allowProjectChange }: Prop
                 </div>
                 {overdueCount > 0 && (
                   <span className="rounded-full bg-rose-500/10 px-1.5 py-0.5 text-[10px] text-rose-400">
-                    {overdueCount} متأخرة
+                    {overdueCount} {t("tasks.overdue")}
                   </span>
                 )}
               </div>
@@ -99,7 +101,7 @@ export function KanbanBoard({ tasks, users, projects, allowProjectChange }: Prop
               <div className="space-y-2">
                 {items.length === 0 ? (
                   <div className="rounded-lg border border-dashed border-zinc-800 p-4 text-center text-[11px] text-zinc-600">
-                    اسحب مهمة هنا · أو اضغط "مهمة جديدة"
+                    {t("tasks.kanban.empty")}
                   </div>
                 ) : (
                   items.map((task) => (
@@ -110,6 +112,8 @@ export function KanbanBoard({ tasks, users, projects, allowProjectChange }: Prop
                       onDragStart={() => setDragging(task.id)}
                       onDragEnd={() => setDragging(null)}
                       onClick={() => setOpenTask(task)}
+                      t={t}
+                      locale={locale}
                     />
                   ))
                 )}
@@ -138,12 +142,16 @@ function TaskCard({
   onDragStart,
   onDragEnd,
   onClick,
+  t,
+  locale,
 }: {
   task: KanbanTask;
   draggable?: boolean;
   onDragStart?: () => void;
   onDragEnd?: () => void;
   onClick?: () => void;
+  t: (key: string) => string;
+  locale: "ar" | "en";
 }) {
   const overdue = isOverdue(task.dueAt, task.status);
   const days = daysUntil(task.dueAt);
@@ -165,7 +173,7 @@ function TaskCard({
       {overdue && (
         <div className="mb-1.5 flex items-center gap-1 text-[10px] font-semibold text-rose-400">
           <AlertCircle className="h-3 w-3" />
-          متأخرة {Math.abs(days ?? 0)} يوم
+          {t("tasks.overdueByDays").replace("{n}", String(Math.abs(days ?? 0)))}
         </div>
       )}
       <div className="mb-1 text-sm font-medium text-zinc-100">{task.title}</div>
@@ -187,7 +195,7 @@ function TaskCard({
               {task.assignee.name}
             </span>
           ) : (
-            <span className="text-zinc-600">بدون مسؤول</span>
+            <span className="text-zinc-600">{t("tasks.unassigned")}</span>
           )}
           {collaboratorCount > 0 && (
             <span className="flex items-center gap-0.5 rounded-full bg-sky-500/10 px-1.5 py-0.5 text-[9px] text-sky-400">
@@ -208,10 +216,10 @@ function TaskCard({
               )}
             >
               <Clock className="h-3 w-3" />
-              {new Date(task.dueAt).toLocaleDateString("en", {
-                month: "short",
-                day: "numeric",
-              })}
+              {new Date(task.dueAt).toLocaleDateString(
+                locale === "en" ? "en-US" : "en",
+                { month: "short", day: "numeric" }
+              )}
             </span>
           )}
         </div>

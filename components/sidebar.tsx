@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import { signOut } from "next-auth/react";
 import {
   Home,
@@ -12,6 +13,14 @@ import {
   FileText,
   ShieldCheck,
   LogOut,
+  Shield,
+  Archive,
+  Palette,
+  Calendar,
+  Camera,
+  Package,
+  Menu,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { useLocale, useT } from "@/lib/i18n/client";
@@ -31,41 +40,91 @@ const nav: NavItem[] = [
   { href: "/projects", labelKey: "nav.projects", icon: Briefcase, highlight: true },
   { href: "/tasks", labelKey: "nav.tasks", icon: KanbanSquare, highlight: true },
   { href: "/team", labelKey: "nav.team", icon: Users },
+  { href: "/meetings", labelKey: "nav.meetings", icon: Calendar, highlight: true },
+  { href: "/shoots", labelKey: "nav.shoots", icon: Camera, highlight: true },
+  { href: "/equipment", labelKey: "nav.equipment", icon: Package },
   { href: "/finance", labelKey: "nav.finance", icon: DollarSign },
-  { href: "/reports", labelKey: "nav.reports", icon: FileText },
+  { href: "/reports", labelKey: "nav.reports", icon: FileText, adminOnly: true },
   { href: "/admin/users", labelKey: "nav.admin_users", icon: ShieldCheck, adminOnly: true },
+  { href: "/admin/audit", labelKey: "nav.admin_audit", icon: Shield, adminOnly: true },
+  { href: "/admin/backup", labelKey: "nav.admin_backup", icon: Archive, adminOnly: true },
+  { href: "/admin/theme", labelKey: "nav.admin_theme", icon: Palette, adminOnly: true },
 ];
 
 interface Props {
   userRole: Role;
   userName: string;
   userEmail: string;
+  logoPath?: string;
 }
 
-export function Sidebar({ userRole, userName, userEmail }: Props) {
+export function Sidebar({ userRole, userName, userEmail, logoPath }: Props) {
   const pathname = usePathname();
   const t = useT();
   const { locale } = useLocale();
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  // Auto-close the mobile drawer when the user navigates.
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
+
+  // Lock body scroll while the drawer is open on mobile.
+  useEffect(() => {
+    if (mobileOpen) {
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = "";
+      };
+    }
+  }, [mobileOpen]);
 
   const activeIndicatorClass =
     locale === "ar"
-      ? "mr-auto h-1.5 w-1.5 rounded-full bg-emerald-500"
-      : "ml-auto h-1.5 w-1.5 rounded-full bg-emerald-500";
+      ? "mr-auto h-1.5 w-1.5 rounded-full"
+      : "ml-auto h-1.5 w-1.5 rounded-full";
 
-  return (
-    <aside className="flex w-60 shrink-0 flex-col gap-1 border-zinc-800 bg-zinc-900/40 p-4 border-s">
-      <div className="mb-4 px-3 py-3">
-        <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/10 text-sm font-bold text-emerald-500">
-            S
+  const panel = (
+    <aside
+      className={cn(
+        "flex w-60 shrink-0 flex-col gap-1 bg-zinc-900/95 p-4 md:bg-zinc-900/40",
+        "md:relative md:h-auto md:translate-x-0 md:border-zinc-800 md:border-s",
+        // Mobile: fixed drawer overlay
+        "fixed inset-y-0 z-40 h-screen border-zinc-800 border-s transition-transform duration-200",
+        locale === "ar" ? "right-0" : "left-0",
+        mobileOpen
+          ? "translate-x-0"
+          : locale === "ar"
+          ? "translate-x-full md:translate-x-0"
+          : "-translate-x-full md:translate-x-0"
+      )}
+    >
+      <div className="mb-4 flex items-start justify-between gap-2 px-2 py-3 md:block">
+        <div className="flex-1">
+          <div
+            className="rounded-lg px-3 py-2.5"
+            style={{ background: "var(--color-brand-dim)" }}
+          >
+            <img
+              src={logoPath || "/srb-logo-white.png"}
+              alt="SRB"
+              className="h-7 w-full object-contain object-center"
+            />
           </div>
-          <div>
-            <div className="text-sm font-bold text-zinc-100">SRB</div>
-            <div className="text-[10px] text-zinc-500">{t("brand.system")}</div>
+          <div className="mt-2 text-center text-[10px] text-zinc-500">
+            {t("brand.system")}
           </div>
         </div>
+        {/* Close button — mobile only. 44px min size meets iOS touch target guidance. */}
+        <button
+          onClick={() => setMobileOpen(false)}
+          className="mt-2 flex h-11 w-11 items-center justify-center rounded-md text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100 md:hidden"
+          aria-label="Close menu"
+        >
+          <X className="h-5 w-5" />
+        </button>
       </div>
-      <nav className="flex flex-col gap-0.5">
+      <nav className="flex flex-col gap-0.5 overflow-y-auto">
         {nav.map((item) => {
           if (item.adminOnly && userRole !== "admin") return null;
           const Icon = item.icon;
@@ -79,15 +138,27 @@ export function Sidebar({ userRole, userName, userEmail }: Props) {
             "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition",
             active
               ? "bg-zinc-800/80 text-zinc-100"
-              : "text-zinc-400 hover:bg-zinc-800/60 hover:text-zinc-100",
-            isHighlight && !active && "text-emerald-400 hover:text-emerald-300"
+              : "text-zinc-400 hover:bg-zinc-800/60 hover:text-zinc-100"
           );
 
+          const highlightStyle =
+            isHighlight && !active ? { color: "var(--color-brand)" } : undefined;
+
           return (
-            <Link key={item.href} href={item.href} className={classes}>
+            <Link
+              key={item.href}
+              href={item.href}
+              className={classes}
+              style={highlightStyle}
+            >
               <Icon className="h-4 w-4" />
               <span>{t(item.labelKey)}</span>
-              {active && <span className={activeIndicatorClass} />}
+              {active && (
+                <span
+                  className={activeIndicatorClass}
+                  style={{ background: "var(--color-brand)" }}
+                />
+              )}
             </Link>
           );
         })}
@@ -127,5 +198,36 @@ export function Sidebar({ userRole, userName, userEmail }: Props) {
         <div className="text-[10px] text-zinc-600">v1.0.0 · Phase 2 real</div>
       </div>
     </aside>
+  );
+
+  return (
+    <>
+      {/* Mobile hamburger — only shown below md. Safe-area-inset keeps the
+          button below the iPhone Dynamic Island / notch. */}
+      <button
+        onClick={() => setMobileOpen(true)}
+        className="fixed z-30 flex h-11 w-11 items-center justify-center rounded-lg border border-zinc-800 bg-zinc-900/90 text-zinc-200 shadow-lg md:hidden"
+        style={{
+          top: "max(12px, env(safe-area-inset-top))",
+          ...(locale === "ar"
+            ? { right: "max(12px, env(safe-area-inset-right))" }
+            : { left: "max(12px, env(safe-area-inset-left))" }),
+        }}
+        aria-label="Open menu"
+      >
+        <Menu className="h-5 w-5" />
+      </button>
+
+      {/* Backdrop — clicking closes the drawer */}
+      {mobileOpen && (
+        <div
+          onClick={() => setMobileOpen(false)}
+          className="fixed inset-0 z-30 bg-black/60 md:hidden"
+          aria-hidden
+        />
+      )}
+
+      {panel}
+    </>
   );
 }

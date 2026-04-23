@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Plus, X } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { createTaskAction } from "@/app/tasks/actions";
+import { useT } from "@/lib/i18n/client";
 
 interface User {
   id: string;
@@ -24,6 +25,7 @@ interface Props {
 }
 
 export function NewTaskButton({ users, projects, defaultProjectId, label }: Props) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -42,7 +44,7 @@ export function NewTaskButton({ users, projects, defaultProjectId, label }: Prop
         formRef.current?.reset();
         router.refresh();
       } else {
-        setError(res.message ?? "حدث خطأ");
+        setError(res.message ?? t("common.errorGeneric"));
       }
     });
   };
@@ -54,7 +56,7 @@ export function NewTaskButton({ users, projects, defaultProjectId, label }: Prop
         className="flex items-center gap-2 rounded-lg bg-emerald-500 px-3 py-1.5 text-sm font-semibold text-emerald-950 transition hover:bg-emerald-400"
       >
         <Plus className="h-4 w-4" />
-        {label ?? "مهمة جديدة"}
+        {label ?? t("action.newTask")}
       </button>
 
       {open && (
@@ -64,7 +66,7 @@ export function NewTaskButton({ users, projects, defaultProjectId, label }: Prop
         >
           <div className="w-full max-w-lg rounded-2xl border border-zinc-800 bg-zinc-900 p-5 shadow-2xl">
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-lg font-bold">مهمة جديدة</h3>
+              <h3 className="text-lg font-bold">{t("action.newTask")}</h3>
               <button
                 onClick={() => setOpen(false)}
                 className="text-zinc-500 hover:text-zinc-300"
@@ -84,23 +86,23 @@ export function NewTaskButton({ users, projects, defaultProjectId, label }: Prop
               action={onSubmit}
               className="grid grid-cols-1 gap-3 sm:grid-cols-2"
             >
-              <Field label="عنوان المهمة *" full>
+              <Field label={t("tasks.field.titleRequired")} full>
                 <input
                   name="title"
                   required
-                  placeholder="مثال: تصميم بوستر للحملة"
+                  placeholder={t("tasks.field.titlePlaceholder")}
                   className="w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 focus:border-emerald-500/50 focus:outline-none"
                 />
               </Field>
 
               {!defaultProjectId && projects && (
-                <Field label="المشروع">
+                <Field label={t("tasks.field.project")}>
                   <select
                     name="projectId"
                     defaultValue=""
                     className="w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 focus:border-emerald-500/50 focus:outline-none"
                   >
-                    <option value="">بدون مشروع</option>
+                    <option value="">{t("tasks.noProject")}</option>
                     {projects.map((p) => (
                       <option key={p.id} value={p.id}>
                         {p.title}
@@ -110,13 +112,13 @@ export function NewTaskButton({ users, projects, defaultProjectId, label }: Prop
                 </Field>
               )}
 
-              <Field label="المسؤول">
+              <Field label={t("tasks.field.assignee")}>
                 <select
                   name="assigneeId"
                   defaultValue=""
                   className="w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 focus:border-emerald-500/50 focus:outline-none"
                 >
-                  <option value="">بدون مسؤول</option>
+                  <option value="">{t("tasks.unassigned")}</option>
                   {users.map((u) => (
                     <option key={u.id} value={u.id}>
                       {u.name}
@@ -125,33 +127,33 @@ export function NewTaskButton({ users, projects, defaultProjectId, label }: Prop
                 </select>
               </Field>
 
-              <Field label="الأولوية">
+              <Field label={t("tasks.field.priority")}>
                 <select
                   name="priority"
                   defaultValue="normal"
                   className="w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 focus:border-emerald-500/50 focus:outline-none"
                 >
-                  <option value="low">منخفضة</option>
-                  <option value="normal">عادية</option>
-                  <option value="high">مرتفعة</option>
-                  <option value="urgent">عاجلة</option>
+                  <option value="low">{t("priority.low")}</option>
+                  <option value="normal">{t("priority.normal")}</option>
+                  <option value="high">{t("priority.high")}</option>
+                  <option value="urgent">{t("priority.urgent")}</option>
                 </select>
               </Field>
 
-              <Field label="الحالة">
+              <Field label={t("tasks.field.status")}>
                 <select
                   name="status"
                   defaultValue="todo"
                   className="w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 focus:border-emerald-500/50 focus:outline-none"
                 >
-                  <option value="todo">قيد الانتظار</option>
-                  <option value="in_progress">قيد العمل</option>
-                  <option value="in_review">قيد المراجعة</option>
-                  <option value="done">مكتمل</option>
+                  <option value="todo">{t("taskStatus.todo")}</option>
+                  <option value="in_progress">{t("taskStatus.in_progress")}</option>
+                  <option value="in_review">{t("taskStatus.in_review")}</option>
+                  <option value="done">{t("taskStatus.done")}</option>
                 </select>
               </Field>
 
-              <Field label="موعد التسليم">
+              <Field label={t("tasks.field.due")}>
                 <input
                   name="dueAt"
                   type="date"
@@ -159,22 +161,22 @@ export function NewTaskButton({ users, projects, defaultProjectId, label }: Prop
                 />
               </Field>
 
-              <Field label="الساعات التقديرية">
+              <Field label={t("tasks.field.estimated")}>
                 <input
                   name="estimatedHours"
                   type="number"
                   step="0.5"
                   min="0"
-                  placeholder="مثال: 8"
+                  placeholder={t("tasks.field.hoursPlaceholder")}
                   className="w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 focus:border-emerald-500/50 focus:outline-none"
                 />
               </Field>
 
-              <Field label="الوصف" full>
+              <Field label={t("tasks.field.description")} full>
                 <textarea
                   name="description"
                   rows={3}
-                  placeholder="اختياري — تفاصيل المهمة"
+                  placeholder={t("tasks.field.descPlaceholder")}
                   className="w-full resize-none rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 focus:border-emerald-500/50 focus:outline-none"
                 />
               </Field>
@@ -185,14 +187,14 @@ export function NewTaskButton({ users, projects, defaultProjectId, label }: Prop
                   onClick={() => setOpen(false)}
                   className="rounded-md border border-zinc-800 px-3 py-1.5 text-xs text-zinc-400 hover:bg-zinc-800"
                 >
-                  إلغاء
+                  {t("action.cancel")}
                 </button>
                 <button
                   type="submit"
                   disabled={isPending}
                   className="rounded-md bg-emerald-500 px-4 py-1.5 text-sm font-semibold text-emerald-950 hover:bg-emerald-400 disabled:opacity-60"
                 >
-                  {isPending ? "يُنشئ..." : "إنشاء المهمة"}
+                  {isPending ? t("action.creating") : t("tasks.create")}
                 </button>
               </div>
             </form>

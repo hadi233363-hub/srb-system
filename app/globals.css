@@ -1,5 +1,15 @@
 @import "tailwindcss";
 
+/* Theme variables — overridden at runtime by the admin on /admin/theme.
+ * Defaults match Tailwind's emerald-500 / sky-500 palette. */
+:root {
+  --color-brand: #10b981;
+  --color-brand-dim: rgba(16, 185, 129, 0.1);
+  --color-brand-border: rgba(16, 185, 129, 0.3);
+  --color-accent: #0ea5e9;
+  --color-accent-dim: rgba(14, 165, 233, 0.1);
+}
+
 html {
   color-scheme: dark;
 }
@@ -8,6 +18,15 @@ html,
 body {
   background: #09090b;
   color: #fafafa;
+}
+
+/* Honour iOS safe-area-inset so notched phones don't hide content under the
+ * status bar / Dynamic Island. Paired with viewport-fit=cover in layout.tsx. */
+body {
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
 }
 
 body {
