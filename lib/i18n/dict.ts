@@ -869,6 +869,24 @@ export const DICT: Record<string, { ar: string; en: string }> = {
     ar: "مثال: تصميم بوستر للحملة",
     en: "e.g. Design campaign poster",
   },
+  "tasks.suggest.title": {
+    ar: "✨ مرشّحون مناسبون لهالمهمة",
+    en: "✨ Best fits for this task",
+  },
+  "tasks.suggest.bestFit": { ar: "الأنسب", en: "Best fit" },
+  "tasks.suggest.fit": { ar: "تطابق", en: "fit" },
+  "tasks.suggest.thinking": {
+    ar: "يحلل الفريق ويختار لك الأنسب...",
+    en: "Analyzing the team to find the best fit...",
+  },
+  "tasks.suggest.hint": {
+    ar: "اكتب عنوان المهمة وراح يقترح لك الموظف الأنسب",
+    en: "Type a task title and we'll suggest the best person",
+  },
+  "tasks.suggest.error": {
+    ar: "ما قدرت أحضّر اقتراحات الحين — اختر يدوي",
+    en: "Couldn't load suggestions — pick manually",
+  },
   "tasks.field.status": { ar: "الحالة", en: "Status" },
   "tasks.field.priority": { ar: "الأولوية", en: "Priority" },
   "tasks.field.due": { ar: "موعد التسليم", en: "Due date" },

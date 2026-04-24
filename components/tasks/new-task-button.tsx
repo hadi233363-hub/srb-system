@@ -1,11 +1,12 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, X } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { createTaskAction } from "@/app/tasks/actions";
-import { useT } from "@/lib/i18n/client";
+import { useLocale, useT } from "@/lib/i18n/client";
+import { SmartAssigneeSuggestions } from "./smart-assignee-suggestions";
 
 interface User {
   id: string;
@@ -26,11 +27,29 @@ interface Props {
 
 export function NewTaskButton({ users, projects, defaultProjectId, label }: Props) {
   const t = useT();
+  const { locale } = useLocale();
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const formRef = useRef<HTMLFormElement>(null);
   const router = useRouter();
+
+  // Controlled state for the fields the suggestions engine reads.
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [projectId, setProjectId] = useState<string>(defaultProjectId ?? "");
+  const [assigneeId, setAssigneeId] = useState<string>("");
+
+  // Reset form state whenever the modal closes or reopens.
+  useEffect(() => {
+    if (!open) {
+      setTitle("");
+      setDescription("");
+      setProjectId(defaultProjectId ?? "");
+      setAssigneeId("");
+      setError(null);
+    }
+  }, [open, defaultProjectId]);
 
   const onSubmit = (formData: FormData) => {
     setError(null);
@@ -64,7 +83,7 @@ export function NewTaskButton({ users, projects, defaultProjectId, label }: Prop
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
           onClick={(e) => e.target === e.currentTarget && setOpen(false)}
         >
-          <div className="w-full max-w-lg rounded-2xl border border-zinc-800 bg-zinc-900 p-5 shadow-2xl">
+          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-zinc-800 bg-zinc-900 p-5 shadow-2xl">
             <div className="mb-4 flex items-center justify-between">
               <h3 className="text-lg font-bold">{t("action.newTask")}</h3>
               <button
@@ -90,16 +109,30 @@ export function NewTaskButton({ users, projects, defaultProjectId, label }: Prop
                 <input
                   name="title"
                   required
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
                   placeholder={t("tasks.field.titlePlaceholder")}
                   className="w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 focus:border-emerald-500/50 focus:outline-none"
                 />
               </Field>
 
+              <div className="sm:col-span-2">
+                <SmartAssigneeSuggestions
+                  title={title}
+                  description={description}
+                  projectId={projectId || undefined}
+                  selectedAssigneeId={assigneeId}
+                  onPick={(id) => setAssigneeId(id)}
+                  locale={locale}
+                />
+              </div>
+
               {!defaultProjectId && projects && (
                 <Field label={t("tasks.field.project")}>
                   <select
                     name="projectId"
-                    defaultValue=""
+                    value={projectId}
+                    onChange={(e) => setProjectId(e.target.value)}
                     className="w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 focus:border-emerald-500/50 focus:outline-none"
                   >
                     <option value="">{t("tasks.noProject")}</option>
@@ -115,7 +148,8 @@ export function NewTaskButton({ users, projects, defaultProjectId, label }: Prop
               <Field label={t("tasks.field.assignee")}>
                 <select
                   name="assigneeId"
-                  defaultValue=""
+                  value={assigneeId}
+                  onChange={(e) => setAssigneeId(e.target.value)}
                   className="w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 focus:border-emerald-500/50 focus:outline-none"
                 >
                   <option value="">{t("tasks.unassigned")}</option>
@@ -176,6 +210,8 @@ export function NewTaskButton({ users, projects, defaultProjectId, label }: Prop
                 <textarea
                   name="description"
                   rows={3}
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
                   placeholder={t("tasks.field.descPlaceholder")}
                   className="w-full resize-none rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 focus:border-emerald-500/50 focus:outline-none"
                 />
