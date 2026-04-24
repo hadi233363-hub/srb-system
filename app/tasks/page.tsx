@@ -9,7 +9,7 @@ export default async function TasksPage() {
   const locale = await getLocale();
   const t = (key: string) => translate(key, locale);
 
-  const [tasks, users, projects] = await Promise.all([
+  const [tasks, users, projects, badges] = await Promise.all([
     prisma.task.findMany({
       include: {
         assignee: { select: { id: true, name: true } },
@@ -30,6 +30,17 @@ export default async function TasksPage() {
       where: { status: { in: ["active", "on_hold"] } },
       select: { id: true, title: true },
       orderBy: { title: "asc" },
+    }),
+    prisma.badge.findMany({
+      orderBy: { sortOrder: "asc" },
+      select: {
+        id: true,
+        slug: true,
+        labelAr: true,
+        labelEn: true,
+        icon: true,
+        colorHex: true,
+      },
     }),
   ]);
 
@@ -59,7 +70,7 @@ export default async function TasksPage() {
             <span className="mx-2 text-zinc-600">· {t("tasks.clickToEdit")}</span>
           </p>
         </div>
-        <NewTaskButton users={users} projects={projects} />
+        <NewTaskButton users={users} projects={projects} badges={badges} />
       </div>
 
       {tasks.length === 0 ? (

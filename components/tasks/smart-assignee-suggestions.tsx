@@ -1,19 +1,28 @@
 "use client";
 
 // Smart assignee suggestions — rendered inside the new-task modal.
-// Watches { title, description, projectId } and asks the API who best fits.
-// User can click a suggestion card to one-tap-assign that person.
+// Watches { title, description, projectId, requiredBadgeSlugs } and asks the
+// API who best fits. User can click a suggestion card to one-tap-assign.
 
 import { useEffect, useRef, useState } from "react";
-import { Sparkles, CheckCircle2, Briefcase, Users, Clock, Award } from "lucide-react";
+import { Sparkles, CheckCircle2, Briefcase, Users, Clock, Award, AlertCircle } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { translate, type Locale } from "@/lib/i18n/dict";
 
 interface SuggestionReason {
-  kind: "free" | "topic" | "project" | "track_record" | "department";
+  kind: "badge" | "free" | "topic" | "project" | "track_record" | "department";
   ar: string;
   en: string;
+}
+
+interface SuggestionBadge {
+  slug: string;
+  labelAr: string;
+  labelEn: string;
+  icon: string;
+  colorHex: string;
+  matched: boolean;
 }
 
 interface AssigneeSuggestion {
@@ -25,6 +34,7 @@ interface AssigneeSuggestion {
     department: string | null;
     role: string;
   };
+  badges: SuggestionBadge[];
   score: number;
   reasons: SuggestionReason[];
   openTaskCount: number;
@@ -33,7 +43,14 @@ interface AssigneeSuggestion {
   isProjectMember: boolean;
 }
 
+interface SuggestionsResponse {
+  suggestions: AssigneeSuggestion[];
+  inferredBadgeSlugs: string[];
+  filteredByBadge: boolean;
+}
+
 const REASON_ICONS: Record<SuggestionReason["kind"], LucideIcon> = {
+  badge: Award,
   free: Clock,
   topic: Sparkles,
   project: Briefcase,
@@ -41,33 +58,41 @@ const REASON_ICONS: Record<SuggestionReason["kind"], LucideIcon> = {
   department: Users,
 };
 
-const DEBOUNCE_MS = 400;
+const DEBOUNCE_MS = 350;
 
 export function SmartAssigneeSuggestions({
   title,
   description,
   projectId,
+  requiredBadgeSlugs,
   selectedAssigneeId,
   onPick,
+  onInferredBadges,
   locale,
 }: {
   title: string;
   description?: string;
   projectId?: string;
+  requiredBadgeSlugs?: string[];
   selectedAssigneeId?: string;
   onPick: (userId: string) => void;
+  /** Bubble auto-detected badges back so the BadgePicker can highlight them. */
+  onInferredBadges?: (slugs: string[]) => void;
   locale: Locale;
 }) {
   const t = (k: string) => translate(k, locale);
   const [loading, setLoading] = useState(false);
-  const [suggestions, setSuggestions] = useState<AssigneeSuggestion[]>([]);
+  const [data, setData] = useState<SuggestionsResponse | null>(null);
   const [err, setErr] = useState(false);
   const lastRequestRef = useRef(0);
 
+  const reqBadges = requiredBadgeSlugs ?? [];
+  const reqBadgesKey = reqBadges.slice().sort().join(",");
+
   useEffect(() => {
     const trimmed = title.trim();
-    if (trimmed.length < 2) {
-      setSuggestions([]);
+    if (trimmed.length < 2 && reqBadges.length === 0) {
+      setData(null);
       setLoading(false);
       return;
     }
@@ -84,25 +109,30 @@ export function SmartAssigneeSuggestions({
             title: trimmed,
             description: description ?? null,
             projectId: projectId ?? null,
-            limit: 3,
+            requiredBadgeSlugs: reqBadges,
+            limit: 5,
           }),
         });
         if (!res.ok) {
           if (myReq === lastRequestRef.current) {
             setErr(true);
-            setSuggestions([]);
+            setData(null);
           }
           return;
         }
-        const data = (await res.json()) as { suggestions: AssigneeSuggestion[] };
+        const json = (await res.json()) as SuggestionsResponse;
         if (myReq === lastRequestRef.current) {
-          setSuggestions(data.suggestions);
+          setData(json);
           setErr(false);
+          // Bubble auto-detected badges back when no explicit picks were sent.
+          if (reqBadges.length === 0 && onInferredBadges) {
+            onInferredBadges(json.inferredBadgeSlugs);
+          }
         }
       } catch {
         if (myReq === lastRequestRef.current) {
           setErr(true);
-          setSuggestions([]);
+          setData(null);
         }
       } finally {
         if (myReq === lastRequestRef.current) {
@@ -112,9 +142,11 @@ export function SmartAssigneeSuggestions({
     }, DEBOUNCE_MS);
 
     return () => clearTimeout(handle);
-  }, [title, description, projectId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [title, description, projectId, reqBadgesKey]);
 
-  if (title.trim().length < 2) {
+  // Empty-state hint — only when there's literally nothing to act on.
+  if (title.trim().length < 2 && reqBadges.length === 0) {
     return (
       <div className="rounded-lg border border-dashed border-zinc-800 bg-zinc-950/50 p-3 text-center">
         <div className="flex items-center justify-center gap-2 text-[11px] text-zinc-600">
@@ -133,7 +165,7 @@ export function SmartAssigneeSuggestions({
     );
   }
 
-  if (loading && suggestions.length === 0) {
+  if (loading && !data) {
     return (
       <div className="rounded-lg border border-zinc-800 bg-zinc-950/50 p-3">
         <div className="flex items-center gap-2 text-[11px] text-zinc-500">
@@ -144,7 +176,21 @@ export function SmartAssigneeSuggestions({
     );
   }
 
-  if (suggestions.length === 0) return null;
+  if (!data) return null;
+  const { suggestions, filteredByBadge } = data;
+
+  if (suggestions.length === 0) {
+    return (
+      <div className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-[11px] text-amber-300">
+        <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+        <span>
+          {filteredByBadge
+            ? t("tasks.suggest.noMatchBadge")
+            : t("tasks.suggest.noMatch")}
+        </span>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-2">
@@ -184,7 +230,7 @@ function SuggestionCard({
   locale: Locale;
   t: (k: string) => string;
 }) {
-  const { user, score, reasons } = suggestion;
+  const { user, score, reasons, badges } = suggestion;
   const initials = user.name
     .split(" ")
     .filter(Boolean)
@@ -219,7 +265,7 @@ function SuggestionCard({
         {initials || "?"}
       </div>
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <span className="truncate text-sm font-semibold text-zinc-100">
             {user.name}
           </span>
@@ -228,12 +274,33 @@ function SuggestionCard({
               {t("tasks.suggest.bestFit")}
             </span>
           )}
-          {isPicked && (
-            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
-          )}
+          {isPicked && <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />}
         </div>
+
+        {badges.length > 0 && (
+          <div className="mt-1 flex flex-wrap gap-1">
+            {badges.slice(0, 4).map((b) => (
+              <span
+                key={b.slug}
+                className={cn(
+                  "inline-flex items-center gap-0.5 rounded-full border px-1.5 py-0.5 text-[9px]",
+                  b.matched && "ring-1 ring-emerald-400"
+                )}
+                style={{
+                  borderColor: b.colorHex + "55",
+                  backgroundColor: b.colorHex + "15",
+                  color: b.colorHex,
+                }}
+              >
+                <span>{b.icon}</span>
+                <span>{locale === "ar" ? b.labelAr : b.labelEn}</span>
+              </span>
+            ))}
+          </div>
+        )}
+
         {(user.jobTitle || user.department) && (
-          <div className="text-[10px] text-zinc-500">
+          <div className="mt-0.5 text-[10px] text-zinc-500">
             {[user.jobTitle, user.department].filter(Boolean).join(" · ")}
           </div>
         )}

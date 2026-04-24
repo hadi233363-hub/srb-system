@@ -1,27 +1,27 @@
-// Smart assignee suggestion engine.
+// Smart assignee suggestion engine — v2 (badge-aware).
 //
-// When a manager types a new task, we want the system to nudge them toward
-// the *right* person — not just show every employee in alphabetical order.
+// When a manager creates a task they can either:
+//   (a) explicitly pick required badges (e.g. "صور" + "ديزاينر"), or
+//   (b) just type a title — we detect the badges automatically from keywords.
 //
-// "Right" combines four signals (weights tuned for a small agency where
-// availability matters more than past expertise):
+// Either way, candidates are scored on four signals:
 //
-//   1. Workload (40%)        — fewer open tasks = more available
-//   2. Topic match (30%)     — keywords overlap with the user's past
-//                              completed tasks
-//   3. Project membership (20%) — already on the project gets a boost
-//   4. Track record (10%)    — % of recent tasks completed (not failed/blocked)
+//   1. Badge match (50%)        — % of required badges the user holds.
+//                                  When badges are in play this dominates;
+//                                  no badge match = filtered out entirely.
+//   2. Workload (25%)           — fewer open tasks = more available
+//   3. Project membership (15%) — already on the project gets a boost
+//   4. Track record (10%)       — % of recent tasks completed
 //
-// We compute a 0–1 fit score per active user, attach a small list of
-// human-readable reasons, and return the top N.
-//
-// We don't filter anyone out — even a "0% match" employee shows up if
-// asked for explicitly. Suggestions are advisory; the manager decides.
+// If neither user-picked nor auto-detected badges exist, we fall back to
+// the old text-similarity scoring so the suggester still works for one-off
+// "buy office supplies" type tasks.
 
 import { prisma } from "@/lib/db/prisma";
+import { detectBadgesFromText } from "@/lib/db/badges";
 
 const MAX_PAST_TASKS_PER_USER = 50;
-const MAX_OPEN_TASKS_FLOOR = 3; // workload normalization floor — fewer than this is "very free"
+const MAX_OPEN_TASKS_FLOOR = 3;
 
 export interface AssigneeSuggestion {
   user: {
@@ -32,17 +32,25 @@ export interface AssigneeSuggestion {
     department: string | null;
     role: string;
   };
+  /** Skill badges the user holds — exposed so the UI can render chips. */
+  badges: Array<{
+    slug: string;
+    labelAr: string;
+    labelEn: string;
+    icon: string;
+    colorHex: string;
+    matched: boolean;
+  }>;
   score: number; // 0..1
   reasons: SuggestionReason[];
   openTaskCount: number;
-  completionRate: number | null; // 0..1, null if no history
-  topicMatchCount: number; // raw count of past tasks with overlapping keywords
+  completionRate: number | null;
+  topicMatchCount: number;
   isProjectMember: boolean;
 }
 
 export interface SuggestionReason {
-  kind: "free" | "topic" | "project" | "track_record" | "department";
-  /** Human-readable Arabic + English. The component picks the right one. */
+  kind: "badge" | "free" | "topic" | "project" | "track_record" | "department";
   ar: string;
   en: string;
 }
@@ -51,12 +59,29 @@ export async function suggestAssignees(opts: {
   title: string;
   description?: string | null;
   projectId?: string | null;
+  /** Slugs of badges the manager explicitly required. */
+  requiredBadgeSlugs?: string[];
   limit?: number;
-}): Promise<AssigneeSuggestion[]> {
+}): Promise<{
+  suggestions: AssigneeSuggestion[];
+  /** Badges we either auto-detected (no explicit picks) or echoed back from the request. */
+  inferredBadgeSlugs: string[];
+  /** True iff we actually filtered out users who had no matching badge. */
+  filteredByBadge: boolean;
+}> {
   const { title, description, projectId } = opts;
   const limit = opts.limit ?? 3;
+  const explicitBadges = (opts.requiredBadgeSlugs ?? []).filter(Boolean);
 
-  // Pull every active employee — small agency, so this is a tiny query.
+  // Auto-detect when the user didn't pick any. Detected badges hint the
+  // ranking but don't filter anyone out — we want to surface alternatives.
+  const detected = explicitBadges.length === 0
+    ? detectBadgesFromText(`${title} ${description ?? ""}`)
+    : [];
+  const inferredBadgeSlugs = explicitBadges.length > 0 ? explicitBadges : detected;
+  const isExplicit = explicitBadges.length > 0;
+
+  // Pull every active employee with their badges in one shot.
   const users = await prisma.user.findMany({
     where: { active: true, approvedAt: { not: null } },
     select: {
@@ -66,14 +91,18 @@ export async function suggestAssignees(opts: {
       role: true,
       jobTitle: true,
       department: true,
+      badges: {
+        include: { badge: true },
+      },
     },
   });
 
-  if (users.length === 0) return [];
+  if (users.length === 0) {
+    return { suggestions: [], inferredBadgeSlugs, filteredByBadge: false };
+  }
 
-  // Pull each user's open task count + recent task history in one shot.
   const userIds = users.map((u) => u.id);
-  const [openCounts, recentTasks, projectMembers] = await Promise.all([
+  const [openCounts, recentTasks, projectMembers, project] = await Promise.all([
     prisma.task.groupBy({
       by: ["assigneeId"],
       where: {
@@ -99,13 +128,18 @@ export async function suggestAssignees(opts: {
           select: { userId: true, role: true },
         })
       : Promise.resolve([] as { userId: string; role: string | null }[]),
+    projectId
+      ? prisma.project.findUnique({
+          where: { id: projectId },
+          select: { type: true, title: true, description: true },
+        })
+      : Promise.resolve(null),
   ]);
 
   const openByUser = new Map<string, number>();
   for (const row of openCounts) {
     if (row.assigneeId) openByUser.set(row.assigneeId, row._count._all);
   }
-
   const tasksByUser = new Map<
     string,
     Array<{ title: string; status: string; completedAt: Date | null }>
@@ -118,89 +152,120 @@ export async function suggestAssignees(opts: {
       tasksByUser.set(t.assigneeId, arr);
     }
   }
-
   const projectMemberIds = new Set(projectMembers.map((m) => m.userId));
 
-  // Project info — used for "department alignment" hint.
-  const project = projectId
-    ? await prisma.project.findUnique({
-        where: { id: projectId },
-        select: { type: true, title: true, description: true },
-      })
-    : null;
-
-  // Tokenize the new task once.
   const newKeywords = tokenize(`${title} ${description ?? ""} ${project?.title ?? ""}`);
 
-  // Find the maximum open-task count so we can normalize without dividing
-  // by a tiny number (otherwise one super-busy person would skew everyone).
   let maxOpen = MAX_OPEN_TASKS_FLOOR;
   for (const c of openByUser.values()) {
     if (c > maxOpen) maxOpen = c;
   }
 
-  const results: AssigneeSuggestion[] = users.map((user) => {
+  // Eligibility filter: when the manager explicitly required badges, hide
+  // anyone who has zero of them. With auto-detected badges we keep everyone
+  // (the badge match still boosts ranking).
+  const filteredByBadge = isExplicit && inferredBadgeSlugs.length > 0;
+
+  const requiredSet = new Set(inferredBadgeSlugs);
+
+  const candidates: AssigneeSuggestion[] = [];
+  for (const user of users) {
+    const userBadgeSlugs = new Set(user.badges.map((ub) => ub.badge.slug));
+    const matchedBadges = inferredBadgeSlugs.filter((slug) => userBadgeSlugs.has(slug));
+
+    if (filteredByBadge && matchedBadges.length === 0) continue;
+
     const open = openByUser.get(user.id) ?? 0;
     const past = tasksByUser.get(user.id) ?? [];
 
-    const workloadScore = 1 - open / maxOpen; // 1 = totally free, 0 = max busy
+    const workloadScore = 1 - open / maxOpen;
 
-    // Topic match — how many past tasks share at least one keyword.
+    // Badge match score — fraction of required badges the user holds.
+    const badgeScore =
+      inferredBadgeSlugs.length > 0
+        ? matchedBadges.length / inferredBadgeSlugs.length
+        : 0;
+
+    // Topic similarity from past task titles — used as fallback signal when
+    // there are no badges in play, and as a tiny bonus otherwise.
     let topicMatchCount = 0;
     for (const p of past) {
-      const pastKeywords = tokenize(p.title);
-      if (hasOverlap(newKeywords, pastKeywords)) topicMatchCount++;
+      if (hasOverlap(newKeywords, tokenize(p.title))) topicMatchCount++;
     }
-    // Normalize: 5+ matching past tasks = full score.
     const topicScore = Math.min(topicMatchCount / 5, 1);
 
     const projectBonus = projectMemberIds.has(user.id) ? 1 : 0;
 
-    // Completion rate — pct of recent tasks that ended in "done".
     const finished = past.filter((t) => t.status === "done").length;
     const trackRecordRate = past.length >= 3 ? finished / past.length : null;
-    const trackRecordScore = trackRecordRate ?? 0.5; // unknown = neutral
+    const trackRecordScore = trackRecordRate ?? 0.5;
 
-    const score =
-      workloadScore * 0.4 +
-      topicScore * 0.3 +
-      projectBonus * 0.2 +
-      trackRecordScore * 0.1;
+    let score: number;
+    if (inferredBadgeSlugs.length > 0) {
+      // Badge-driven mode: badges dominate.
+      score =
+        badgeScore * 0.5 +
+        workloadScore * 0.25 +
+        projectBonus * 0.15 +
+        trackRecordScore * 0.1;
+    } else {
+      // Free-text mode: fall back to text similarity (old algorithm).
+      score =
+        workloadScore * 0.4 +
+        topicScore * 0.3 +
+        projectBonus * 0.2 +
+        trackRecordScore * 0.1;
+    }
 
-    return {
-      user,
+    candidates.push({
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        jobTitle: user.jobTitle,
+        department: user.department,
+        role: user.role,
+      },
+      badges: user.badges.map((ub) => ({
+        slug: ub.badge.slug,
+        labelAr: ub.badge.labelAr,
+        labelEn: ub.badge.labelEn,
+        icon: ub.badge.icon,
+        colorHex: ub.badge.colorHex,
+        matched: requiredSet.has(ub.badge.slug),
+      })),
       score,
       reasons: buildReasons({
+        matchedBadges,
+        userBadgesAr: user.badges.map((ub) => ub.badge.labelAr),
         open,
         topicMatchCount,
         isProjectMember: projectBonus > 0,
         completionRate: trackRecordRate,
-        userJobTitle: user.jobTitle,
-        userDepartment: user.department,
-        projectType: project?.type ?? null,
       }),
       openTaskCount: open,
       completionRate: trackRecordRate,
       topicMatchCount,
       isProjectMember: projectBonus > 0,
-    };
-  });
+    });
+  }
 
-  results.sort((a, b) => b.score - a.score);
-  return results.slice(0, limit);
+  candidates.sort((a, b) => b.score - a.score);
+  return {
+    suggestions: candidates.slice(0, limit),
+    inferredBadgeSlugs,
+    filteredByBadge,
+  };
 }
 
-/**
- * Turn a chunk of text into a set of normalized keywords. Strips punctuation,
- * lowercases, drops Arabic + English stop-words, and ignores very short tokens.
- */
 function tokenize(text: string): Set<string> {
   const cleaned = text
     .toLowerCase()
-    // Replace any non-letter (Arabic + Latin) with whitespace.
     .replace(/[^\u0600-\u06FFa-z0-9\s]/gi, " ")
     .trim();
-  const tokens = cleaned.split(/\s+/).filter((t) => t.length >= 3 && !STOP_WORDS.has(t));
+  const tokens = cleaned
+    .split(/\s+/)
+    .filter((t) => t.length >= 3 && !STOP_WORDS.has(t));
   return new Set(tokens);
 }
 
@@ -212,89 +277,34 @@ function hasOverlap(a: Set<string>, b: Set<string>): boolean {
 }
 
 const STOP_WORDS = new Set([
-  // Arabic
-  "في",
-  "من",
-  "إلى",
-  "على",
-  "هذا",
-  "هذه",
-  "ذلك",
-  "تلك",
-  "التي",
-  "الذي",
-  "كان",
-  "يكون",
-  "هل",
-  "ما",
-  "لا",
-  "نعم",
-  "مع",
-  "عن",
-  "بعد",
-  "قبل",
-  "خلال",
-  "أو",
-  "ثم",
-  "لكن",
-  "كل",
-  "بعض",
-  "جدا",
-  "اي",
-  "وش",
-  "شنو",
-  // English
-  "the",
-  "and",
-  "for",
-  "with",
-  "that",
-  "this",
-  "these",
-  "those",
-  "from",
-  "into",
-  "about",
-  "have",
-  "has",
-  "had",
-  "will",
-  "would",
-  "should",
-  "could",
-  "can",
-  "may",
-  "any",
-  "all",
-  "some",
-  "new",
+  "في","من","إلى","على","هذا","هذه","ذلك","تلك","التي","الذي","كان","يكون","هل","ما","لا","نعم","مع","عن","بعد","قبل","خلال","أو","ثم","لكن","كل","بعض","جدا","اي","وش","شنو",
+  "the","and","for","with","that","this","these","those","from","into","about","have","has","had","will","would","should","could","can","may","any","all","some","new",
 ]);
 
 function buildReasons(input: {
+  matchedBadges: string[];
+  userBadgesAr: string[];
   open: number;
   topicMatchCount: number;
   isProjectMember: boolean;
   completionRate: number | null;
-  userJobTitle: string | null;
-  userDepartment: string | null;
-  projectType: string | null;
 }): SuggestionReason[] {
   const reasons: SuggestionReason[] = [];
+
+  if (input.matchedBadges.length > 0) {
+    const labels = input.userBadgesAr.slice(0, 2).join(" + ");
+    reasons.push({
+      kind: "badge",
+      ar: `يحمل شارة: ${labels}`,
+      en: `Has badge: ${labels}`,
+    });
+  }
 
   if (input.isProjectMember) {
     reasons.push({
       kind: "project",
       ar: "عضو في نفس المشروع",
       en: "Already on this project",
-    });
-  }
-
-  if (input.topicMatchCount > 0) {
-    const word = input.topicMatchCount === 1 ? "مهمة مشابهة" : "مهام مشابهة";
-    reasons.push({
-      kind: "topic",
-      ar: `سوّى ${input.topicMatchCount} ${word} قبل`,
-      en: `Did ${input.topicMatchCount} similar task${input.topicMatchCount === 1 ? "" : "s"} before`,
     });
   }
 
@@ -312,6 +322,15 @@ function buildReasons(input: {
     });
   }
 
+  if (input.topicMatchCount > 0) {
+    const word = input.topicMatchCount === 1 ? "مهمة مشابهة" : "مهام مشابهة";
+    reasons.push({
+      kind: "topic",
+      ar: `سوّى ${input.topicMatchCount} ${word} قبل`,
+      en: `Did ${input.topicMatchCount} similar task${input.topicMatchCount === 1 ? "" : "s"} before`,
+    });
+  }
+
   if (input.completionRate !== null && input.completionRate >= 0.8) {
     const pct = Math.round(input.completionRate * 100);
     reasons.push({
@@ -321,28 +340,5 @@ function buildReasons(input: {
     });
   }
 
-  if (
-    input.userDepartment &&
-    input.projectType &&
-    departmentMatchesProjectType(input.userDepartment, input.projectType)
-  ) {
-    reasons.push({
-      kind: "department",
-      ar: `تخصصه ${input.userDepartment} يناسب نوع المشروع`,
-      en: `${input.userDepartment} background fits the project type`,
-    });
-  }
-
   return reasons;
-}
-
-function departmentMatchesProjectType(dept: string, projectType: string): boolean {
-  const d = dept.toLowerCase();
-  const p = projectType.toLowerCase();
-  if (p === "video" && (d.includes("video") || d.includes("فيديو") || d.includes("مونتاج"))) return true;
-  if (p === "photo" && (d.includes("photo") || d.includes("تصوير"))) return true;
-  if (p === "web" && (d.includes("dev") || d.includes("برمج") || d.includes("ويب"))) return true;
-  if (p === "digital_campaign" && (d.includes("market") || d.includes("تسويق") || d.includes("ads"))) return true;
-  if (p === "event" && (d.includes("event") || d.includes("فعاليات"))) return true;
-  return false;
 }

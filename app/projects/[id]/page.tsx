@@ -68,18 +68,31 @@ export default async function ProjectDetailPage(props: {
 
   if (!project) notFound();
 
-  const allUsers = await prisma.user.findMany({
-    where: { active: true },
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      role: true,
-      jobTitle: true,
-      department: true,
-    },
-    orderBy: { name: "asc" },
-  });
+  const [allUsers, allBadges] = await Promise.all([
+    prisma.user.findMany({
+      where: { active: true },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        jobTitle: true,
+        department: true,
+      },
+      orderBy: { name: "asc" },
+    }),
+    prisma.badge.findMany({
+      orderBy: { sortOrder: "asc" },
+      select: {
+        id: true,
+        slug: true,
+        labelAr: true,
+        labelEn: true,
+        icon: true,
+        colorHex: true,
+      },
+    }),
+  ]);
 
   const overdue = isOverdue(project.deadlineAt, project.status);
   const tasksOverdue = project.tasks.filter(
@@ -253,6 +266,7 @@ export default async function ProjectDetailPage(props: {
           </h2>
           <NewTaskButton
             users={allUsers.map((u) => ({ id: u.id, name: u.name, email: u.email }))}
+            badges={allBadges}
             defaultProjectId={project.id}
             label={t("projects.addTaskToProject")}
           />

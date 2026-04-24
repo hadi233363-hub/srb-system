@@ -27,6 +27,10 @@ export default async function TeamPage() {
         where: { status: { in: ["todo", "in_progress", "in_review"] } },
         select: { id: true, status: true, dueAt: true, title: true },
       },
+      badges: {
+        include: { badge: true },
+        orderBy: { badge: { sortOrder: "asc" } },
+      },
     },
     orderBy: [{ role: "asc" }, { name: "asc" }],
   });
@@ -108,6 +112,27 @@ export default async function TeamPage() {
                     </div>
                   )}
                 </div>
+
+                {u.badges.length > 0 && (
+                  <div className="mb-3 flex flex-wrap gap-1">
+                    {u.badges.map((ub) => (
+                      <span
+                        key={ub.badgeId}
+                        className="inline-flex items-center gap-0.5 rounded-full border px-1.5 py-0.5 text-[10px]"
+                        style={{
+                          borderColor: ub.badge.colorHex + "55",
+                          backgroundColor: ub.badge.colorHex + "15",
+                          color: ub.badge.colorHex,
+                        }}
+                      >
+                        <span>{ub.badge.icon}</span>
+                        <span>
+                          {locale === "ar" ? ub.badge.labelAr : ub.badge.labelEn}
+                        </span>
+                      </span>
+                    ))}
+                  </div>
+                )}
 
                 {/* Workload */}
                 <div className="grid grid-cols-3 gap-2 border-t border-zinc-800 pt-3">

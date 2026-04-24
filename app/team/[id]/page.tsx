@@ -72,6 +72,10 @@ export default async function EmployeeDetailPage(props: {
           },
         },
       },
+      badges: {
+        include: { badge: true },
+        orderBy: { badge: { sortOrder: "asc" } },
+      },
     },
   });
 
@@ -155,6 +159,26 @@ export default async function EmployeeDetailPage(props: {
             )}
             {user.department && (
               <div className="text-xs text-zinc-500">{user.department}</div>
+            )}
+            {user.badges.length > 0 && (
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                {user.badges.map((ub) => (
+                  <span
+                    key={ub.badgeId}
+                    className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium"
+                    style={{
+                      borderColor: ub.badge.colorHex + "55",
+                      backgroundColor: ub.badge.colorHex + "15",
+                      color: ub.badge.colorHex,
+                    }}
+                  >
+                    <span>{ub.badge.icon}</span>
+                    <span>
+                      {locale === "ar" ? ub.badge.labelAr : ub.badge.labelEn}
+                    </span>
+                  </span>
+                ))}
+              </div>
             )}
             <div className="mt-3 flex flex-wrap gap-4 text-xs text-zinc-400">
               <span className="flex items-center gap-1.5" dir="ltr">

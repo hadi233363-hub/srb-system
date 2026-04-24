@@ -44,9 +44,49 @@ model User {
   meetings           ClientMeeting[]    @relation("MeetingOwner")
   shootCrew          PhotoShootCrew[]
   heldEquipment      Equipment[]        @relation("EquipmentHolder")
+  badges             UserBadge[]
+  badgesAssigned     UserBadge[]        @relation("BadgeAssignedBy")
 
   @@index([active])
   @@index([role])
+}
+
+// Skill / role badges that mark what a user is qualified to do.
+// Replaces / augments the free-form jobTitle string with structured tags.
+// Used by the smart task router to filter & rank candidates.
+model Badge {
+  id        String   @id @default(cuid())
+  // Stable slug for code lookups (photographer, designer, sales, ...).
+  slug      String   @unique
+  labelAr   String
+  labelEn   String
+  // Single emoji (📸, 🎨) — keeps the UI dense without an icon font.
+  icon      String   @default("⭐")
+  colorHex  String   @default("#10b981")
+  sortOrder Int      @default(0)
+  // System badges are seeded at boot and shouldn't be deletable from the UI.
+  // Custom badges (admin-created) are deletable.
+  builtin   Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  users UserBadge[]
+
+  @@index([sortOrder])
+}
+
+// Many-to-many between User and Badge with audit info on the assignment.
+model UserBadge {
+  userId       String
+  badgeId      String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badge        Badge    @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+  assignedAt   DateTime @default(now())
+  assignedById String?
+  assignedBy   User?    @relation("BadgeAssignedBy", fields: [assignedById], references: [id], onDelete: SetNull)
+
+  @@id([userId, badgeId])
+  @@index([badgeId])
+  @@index([userId])
 }
 
 model Client {

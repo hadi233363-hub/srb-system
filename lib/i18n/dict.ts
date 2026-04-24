@@ -887,6 +887,34 @@ export const DICT: Record<string, { ar: string; en: string }> = {
     ar: "ما قدرت أحضّر اقتراحات الحين — اختر يدوي",
     en: "Couldn't load suggestions — pick manually",
   },
+  "tasks.suggest.noMatch": {
+    ar: "ما لقيت موظف مناسب — أعد صياغة المهمة أو اختر يدوي",
+    en: "No good fit yet — rephrase or pick manually",
+  },
+  "tasks.suggest.noMatchBadge": {
+    ar: "ما فيه موظف يحمل الشارات المختارة — أضف شارة لموظف من إدارة الحسابات",
+    en: "Nobody on the team holds these badges yet — add one in Account Management",
+  },
+  "badges.label": { ar: "الشارات", en: "Badges" },
+  "badges.empty": { ar: "ما عنده شارات بعد", en: "No badges yet" },
+  "badges.add": { ar: "أضف شارة", en: "Add badge" },
+  "badges.allAssigned": {
+    ar: "كل الشارات مضافة",
+    en: "All badges assigned",
+  },
+  "badges.required": {
+    ar: "🎯 الشارات المطلوبة (اختياري)",
+    en: "🎯 Required badges (optional)",
+  },
+  "badges.clear": { ar: "مسح", en: "Clear" },
+  "badges.detectedHint": {
+    ar: "النظام اكتشف إن المهمة تحتاج هالشارة",
+    en: "Detected from task title",
+  },
+  "badges.noneDefined": {
+    ar: "ما فيه شارات معرّفة — أضف من إدارة الحسابات",
+    en: "No badges defined — add from Account Management",
+  },
   "tasks.field.status": { ar: "الحالة", en: "Status" },
   "tasks.field.priority": { ar: "الأولوية", en: "Priority" },
   "tasks.field.due": { ar: "موعد التسليم", en: "Due date" },

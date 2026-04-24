@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
-import { listUsers } from "@/lib/db/users";
+import { listUsersWithBadges } from "@/lib/db/users";
+import { prisma } from "@/lib/db/prisma";
 import { UsersAdminClient } from "./users-admin-client";
 import { getLocale } from "@/lib/i18n/server";
 import { translate } from "@/lib/i18n/dict";
@@ -21,7 +22,10 @@ export default async function AdminUsersPage() {
     );
   }
 
-  const users = await listUsers();
+  const [users, allBadges] = await Promise.all([
+    listUsersWithBadges(),
+    prisma.badge.findMany({ orderBy: { sortOrder: "asc" } }),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -31,7 +35,12 @@ export default async function AdminUsersPage() {
           {users.length} {t("admin.accountsCount")} · {t("admin.subtitle")}
         </p>
       </div>
-      <UsersAdminClient users={users} currentUserId={session.user.id} />
+      <UsersAdminClient
+        users={users}
+        currentUserId={session.user.id}
+        allBadges={allBadges}
+        locale={locale}
+      />
     </div>
   );
 }

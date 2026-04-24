@@ -1,5 +1,7 @@
 // Smart assignee suggestions for the new-task modal.
-// POST { title, description?, projectId? } → top-3 ranked candidates.
+// POST { title, description?, projectId?, requiredBadgeSlugs? }
+//   → { suggestions, inferredBadgeSlugs, filteredByBadge }
+//
 // Available to anyone who can create tasks (any active user).
 
 import { NextResponse } from "next/server";
@@ -16,6 +18,7 @@ export async function POST(req: Request) {
     title?: string;
     description?: string | null;
     projectId?: string | null;
+    requiredBadgeSlugs?: string[];
     limit?: number;
   };
   try {
@@ -25,17 +28,26 @@ export async function POST(req: Request) {
   }
 
   const title = (body.title ?? "").trim();
-  if (title.length < 2) {
-    // Don't run on a single-letter title — would just sort everyone by workload.
-    return NextResponse.json({ suggestions: [] });
+  const requiredBadgeSlugs = Array.isArray(body.requiredBadgeSlugs)
+    ? body.requiredBadgeSlugs.filter((s) => typeof s === "string" && s.length > 0)
+    : [];
+
+  // Run when there's *something* to act on — text OR explicit badges.
+  if (title.length < 2 && requiredBadgeSlugs.length === 0) {
+    return NextResponse.json({
+      suggestions: [],
+      inferredBadgeSlugs: [],
+      filteredByBadge: false,
+    });
   }
 
-  const suggestions = await suggestAssignees({
+  const result = await suggestAssignees({
     title,
     description: body.description ?? null,
     projectId: body.projectId ?? null,
-    limit: Math.min(Math.max(body.limit ?? 3, 1), 10),
+    requiredBadgeSlugs,
+    limit: Math.min(Math.max(body.limit ?? 5, 1), 10),
   });
 
-  return NextResponse.json({ suggestions });
+  return NextResponse.json(result);
 }

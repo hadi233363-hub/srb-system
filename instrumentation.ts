@@ -17,6 +17,14 @@ export async function register() {
     return;
   }
 
+  // Seed the default skill badges if missing — idempotent.
+  try {
+    const { ensureDefaultBadges } = await import("./lib/db/badges");
+    await ensureDefaultBadges();
+  } catch (err) {
+    console.error("[instrumentation] ensureDefaultBadges failed:", err);
+  }
+
   const { startScheduler } = await import("./lib/db/backup-scheduler");
   startScheduler();
 }

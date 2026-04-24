@@ -26,6 +26,29 @@ export async function listUsers(options?: {
   });
 }
 
+/**
+ * Same as listUsers but eagerly loads each user's badges. Used by the admin
+ * page (to render badge chips) and the team profile (to display them).
+ */
+export async function listUsersWithBadges(options?: {
+  activeOnly?: boolean;
+  department?: string;
+}) {
+  return prisma.user.findMany({
+    where: {
+      ...(options?.activeOnly ? { active: true } : {}),
+      ...(options?.department ? { department: options.department } : {}),
+    },
+    include: {
+      badges: {
+        include: { badge: true },
+        orderBy: { badge: { sortOrder: "asc" } },
+      },
+    },
+    orderBy: { createdAt: "asc" },
+  });
+}
+
 export async function createUser(input: {
   email: string;
   name: string;

@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Check, Clock, Trash2, UserPlus, X } from "lucide-react";
+import { Check, Clock, Plus, Trash2, UserPlus, X } from "lucide-react";
 import { cn } from "@/lib/cn";
-import type { User } from "@prisma/client";
+import type { Badge as BadgeRow, User, UserBadge } from "@prisma/client";
 import { useT } from "@/lib/i18n/client";
 import {
   addUserAction,
@@ -12,6 +12,7 @@ import {
   deleteUserAction,
   rejectUserAction,
   toggleUserActiveAction,
+  toggleUserBadgeAction,
 } from "./actions";
 
 type AuthRole = "admin" | "manager" | "employee";
@@ -22,12 +23,23 @@ const ROLE_COLOR: Record<AuthRole, string> = {
   employee: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30",
 };
 
+type UserWithBadges = User & {
+  badges: (UserBadge & { badge: BadgeRow })[];
+};
+
 interface Props {
-  users: User[];
+  users: UserWithBadges[];
   currentUserId: string;
+  allBadges: BadgeRow[];
+  locale: "ar" | "en";
 }
 
-export function UsersAdminClient({ users, currentUserId }: Props) {
+export function UsersAdminClient({
+  users,
+  currentUserId,
+  allBadges,
+  locale,
+}: Props) {
   const t = useT();
   const [addOpen, setAddOpen] = useState(false);
   const [flash, setFlash] = useState<{ tone: "success" | "error"; msg: string } | null>(
@@ -40,7 +52,6 @@ export function UsersAdminClient({ users, currentUserId }: Props) {
     setTimeout(() => setFlash(null), 3500);
   };
 
-  // Pending = never approved (approvedAt is null).
   const pendingUsers = users.filter((u) => u.approvedAt === null);
   const approvedUsers = users.filter((u) => u.approvedAt !== null);
 
@@ -61,7 +72,6 @@ export function UsersAdminClient({ users, currentUserId }: Props) {
         </div>
       )}
 
-      {/* Pending queue */}
       {pendingUsers.length > 0 && (
         <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4">
           <div className="mb-1 flex items-center gap-2">
@@ -99,9 +109,7 @@ export function UsersAdminClient({ users, currentUserId }: Props) {
       )}
 
       <div className="flex items-center justify-between">
-        <div className="text-xs text-zinc-500">
-          {t("admin.users.hint")}
-        </div>
+        <div className="text-xs text-zinc-500">{t("admin.users.hint")}</div>
         <button
           onClick={() => setAddOpen(true)}
           className="flex items-center gap-2 rounded-lg bg-emerald-500 px-3 py-1.5 text-xs font-semibold text-emerald-950 transition hover:bg-emerald-400"
@@ -203,100 +211,236 @@ export function UsersAdminClient({ users, currentUserId }: Props) {
           {approvedUsers.map((u) => {
             const isSelf = u.id === currentUserId;
             return (
-              <li
-                key={u.id}
-                className="flex flex-col gap-3 px-5 py-3 sm:flex-row sm:items-center sm:justify-between"
-              >
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-zinc-100">
-                      {u.name}
-                    </span>
-                    {isSelf && (
-                      <span className="rounded-full bg-zinc-800 px-2 py-0.5 text-[10px] text-zinc-400">
-                        {t("admin.users.youLabel")}
+              <li key={u.id} className="flex flex-col gap-3 px-5 py-3">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-zinc-100">
+                        {u.name}
                       </span>
-                    )}
-                    {!u.active && (
-                      <span className="rounded-full bg-zinc-800 px-2 py-0.5 text-[10px] text-zinc-500">
-                        {t("team.label.disabled")}
-                      </span>
-                    )}
-                  </div>
-                  <div className="mt-0.5 flex items-center gap-2 text-xs text-zinc-500" dir="ltr">
-                    <span>{u.email}</span>
-                    {u.department && (
-                      <>
-                        <span className="text-zinc-700">·</span>
-                        <span>{u.department}</span>
-                      </>
-                    )}
-                    {u.lastLoginAt && (
-                      <>
-                        <span className="text-zinc-700">·</span>
-                        <span>
-                          {t("admin.users.loginSince")}: {new Date(u.lastLoginAt).toLocaleDateString("en")}
+                      {isSelf && (
+                        <span className="rounded-full bg-zinc-800 px-2 py-0.5 text-[10px] text-zinc-400">
+                          {t("admin.users.youLabel")}
                         </span>
-                      </>
-                    )}
+                      )}
+                      {!u.active && (
+                        <span className="rounded-full bg-zinc-800 px-2 py-0.5 text-[10px] text-zinc-500">
+                          {t("team.label.disabled")}
+                        </span>
+                      )}
+                    </div>
+                    <div
+                      className="mt-0.5 flex items-center gap-2 text-xs text-zinc-500"
+                      dir="ltr"
+                    >
+                      <span>{u.email}</span>
+                      {u.department && (
+                        <>
+                          <span className="text-zinc-700">·</span>
+                          <span>{u.department}</span>
+                        </>
+                      )}
+                      {u.lastLoginAt && (
+                        <>
+                          <span className="text-zinc-700">·</span>
+                          <span>
+                            {t("admin.users.loginSince")}:{" "}
+                            {new Date(u.lastLoginAt).toLocaleDateString("en")}
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <select
+                      disabled={isSelf || isPending}
+                      value={u.role as AuthRole}
+                      onChange={(e) => {
+                        const newRole = e.target.value as AuthRole;
+                        startTransition(async () => {
+                          await changeUserRoleAction(u.id, newRole);
+                        });
+                      }}
+                      className={cn(
+                        "rounded-md border px-2 py-1 text-xs font-semibold disabled:opacity-60",
+                        ROLE_COLOR[u.role as AuthRole]
+                      )}
+                    >
+                      <option value="admin">{roleLabel("admin")}</option>
+                      <option value="manager">{roleLabel("manager")}</option>
+                      <option value="employee">{roleLabel("employee")}</option>
+                    </select>
+                    <button
+                      disabled={isSelf || isPending}
+                      onClick={() => {
+                        startTransition(async () => {
+                          await toggleUserActiveAction(u.id, !u.active);
+                        });
+                      }}
+                      className={cn(
+                        "rounded-md border px-2 py-1 text-xs transition disabled:opacity-40",
+                        u.active
+                          ? "border-zinc-700 text-zinc-400 hover:bg-zinc-800"
+                          : "border-emerald-500/30 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20"
+                      )}
+                    >
+                      {u.active
+                        ? t("admin.users.toggleDeactivate")
+                        : t("admin.users.toggleActivate")}
+                    </button>
+                    <button
+                      disabled={isSelf || isPending}
+                      onClick={() => {
+                        if (!confirm(`${t("admin.users.deleteConfirm")} ${u.name}`))
+                          return;
+                        startTransition(async () => {
+                          const res = await deleteUserAction(u.id);
+                          if (!res.ok)
+                            showFlash("error", res.message ?? t("common.error"));
+                        });
+                      }}
+                      className="rounded-md border border-rose-500/30 p-1.5 text-rose-400 transition hover:bg-rose-500/10 disabled:opacity-40"
+                      aria-label={t("action.delete")}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
                   </div>
                 </div>
-                <div className="flex shrink-0 items-center gap-2">
-                  <select
-                    disabled={isSelf || isPending}
-                    value={u.role as AuthRole}
-                    onChange={(e) => {
-                      const newRole = e.target.value as AuthRole;
-                      startTransition(async () => {
-                        await changeUserRoleAction(u.id, newRole);
-                      });
-                    }}
-                    className={cn(
-                      "rounded-md border px-2 py-1 text-xs font-semibold disabled:opacity-60",
-                      ROLE_COLOR[u.role as AuthRole]
-                    )}
-                  >
-                    <option value="admin">{roleLabel("admin")}</option>
-                    <option value="manager">{roleLabel("manager")}</option>
-                    <option value="employee">{roleLabel("employee")}</option>
-                  </select>
-                  <button
-                    disabled={isSelf || isPending}
-                    onClick={() => {
-                      startTransition(async () => {
-                        await toggleUserActiveAction(u.id, !u.active);
-                      });
-                    }}
-                    className={cn(
-                      "rounded-md border px-2 py-1 text-xs transition disabled:opacity-40",
-                      u.active
-                        ? "border-zinc-700 text-zinc-400 hover:bg-zinc-800"
-                        : "border-emerald-500/30 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20"
-                    )}
-                  >
-                    {u.active ? t("admin.users.toggleDeactivate") : t("admin.users.toggleActivate")}
-                  </button>
-                  <button
-                    disabled={isSelf || isPending}
-                    onClick={() => {
-                      if (!confirm(`${t("admin.users.deleteConfirm")} ${u.name}`)) return;
-                      startTransition(async () => {
-                        const res = await deleteUserAction(u.id);
-                        if (!res.ok) showFlash("error", res.message ?? t("common.error"));
-                      });
-                    }}
-                    className="rounded-md border border-rose-500/30 p-1.5 text-rose-400 transition hover:bg-rose-500/10 disabled:opacity-40"
-                    aria-label={t("action.delete")}
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
-                </div>
+
+                <UserBadgeRow
+                  user={u}
+                  allBadges={allBadges}
+                  locale={locale}
+                  disabled={isPending}
+                  onToggle={(badgeId) =>
+                    startTransition(async () => {
+                      const res = await toggleUserBadgeAction(u.id, badgeId);
+                      if (!res.ok)
+                        showFlash("error", res.message ?? t("common.error"));
+                    })
+                  }
+                />
               </li>
             );
           })}
         </ul>
       </div>
     </div>
+  );
+}
+
+function UserBadgeRow({
+  user,
+  allBadges,
+  locale,
+  disabled,
+  onToggle,
+}: {
+  user: UserWithBadges;
+  allBadges: BadgeRow[];
+  locale: "ar" | "en";
+  disabled: boolean;
+  onToggle: (badgeId: string) => void;
+}) {
+  const t = useT();
+  const [picking, setPicking] = useState(false);
+  const ownedIds = new Set(user.badges.map((b) => b.badgeId));
+  const availableToAdd = allBadges.filter((b) => !ownedIds.has(b.id));
+
+  return (
+    <div className="flex flex-wrap items-center gap-1.5 border-t border-zinc-800/40 pt-2">
+      <span className="text-[10px] uppercase tracking-wider text-zinc-600">
+        {t("badges.label")}:
+      </span>
+      {user.badges.length === 0 && !picking && (
+        <span className="text-[11px] text-zinc-600">{t("badges.empty")}</span>
+      )}
+      {user.badges.map((ub) => (
+        <BadgeChip
+          key={ub.badgeId}
+          badge={ub.badge}
+          locale={locale}
+          disabled={disabled}
+          onRemove={() => onToggle(ub.badgeId)}
+        />
+      ))}
+
+      {picking ? (
+        <div className="flex flex-wrap items-center gap-1.5 rounded-md border border-zinc-700 bg-zinc-950 p-1.5">
+          {availableToAdd.length === 0 && (
+            <span className="px-2 text-[11px] text-zinc-600">
+              {t("badges.allAssigned")}
+            </span>
+          )}
+          {availableToAdd.map((b) => (
+            <button
+              key={b.id}
+              onClick={() => {
+                onToggle(b.id);
+                if (availableToAdd.length === 1) setPicking(false);
+              }}
+              disabled={disabled}
+              className="flex items-center gap-1 rounded-full border border-zinc-700 px-2 py-0.5 text-[11px] text-zinc-300 transition hover:border-emerald-500/40 hover:bg-emerald-500/10 hover:text-emerald-300 disabled:opacity-40"
+            >
+              <span>{b.icon}</span>
+              <span>{locale === "ar" ? b.labelAr : b.labelEn}</span>
+            </button>
+          ))}
+          <button
+            onClick={() => setPicking(false)}
+            className="rounded-full p-0.5 text-zinc-500 hover:text-zinc-300"
+            aria-label="Close"
+          >
+            <X className="h-3 w-3" />
+          </button>
+        </div>
+      ) : (
+        availableToAdd.length > 0 && (
+          <button
+            onClick={() => setPicking(true)}
+            disabled={disabled}
+            className="flex items-center gap-1 rounded-full border border-dashed border-zinc-700 px-2 py-0.5 text-[10px] text-zinc-500 transition hover:border-emerald-500/40 hover:text-emerald-400 disabled:opacity-40"
+          >
+            <Plus className="h-3 w-3" />
+            {t("badges.add")}
+          </button>
+        )
+      )}
+    </div>
+  );
+}
+
+function BadgeChip({
+  badge,
+  locale,
+  disabled,
+  onRemove,
+}: {
+  badge: BadgeRow;
+  locale: "ar" | "en";
+  disabled: boolean;
+  onRemove: () => void;
+}) {
+  return (
+    <span
+      className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px]"
+      style={{
+        borderColor: badge.colorHex + "55",
+        backgroundColor: badge.colorHex + "15",
+        color: badge.colorHex,
+      }}
+    >
+      <span>{badge.icon}</span>
+      <span>{locale === "ar" ? badge.labelAr : badge.labelEn}</span>
+      <button
+        onClick={onRemove}
+        disabled={disabled}
+        className="ml-1 rounded-full p-0.5 hover:bg-black/20 disabled:opacity-40"
+        aria-label="Remove"
+      >
+        <X className="h-2.5 w-2.5" />
+      </button>
+    </span>
   );
 }
 

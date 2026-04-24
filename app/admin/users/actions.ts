@@ -130,6 +130,55 @@ export async function approveUserAction(
   return { ok: true };
 }
 
+/**
+ * Toggle a badge on a user. Add it if missing, remove it if present.
+ * Returns { ok, attached } where `attached` reflects the new state.
+ */
+export async function toggleUserBadgeAction(userId: string, badgeId: string) {
+  const session = await requireAdmin();
+
+  const [user, badge, existing] = await Promise.all([
+    prisma.user.findUnique({ where: { id: userId } }),
+    prisma.badge.findUnique({ where: { id: badgeId } }),
+    prisma.userBadge.findUnique({
+      where: { userId_badgeId: { userId, badgeId } },
+    }),
+  ]);
+
+  if (!user) return { ok: false as const, message: "الموظف ما لقيته" };
+  if (!badge) return { ok: false as const, message: "الشارة ما لقيتها" };
+
+  if (existing) {
+    await prisma.userBadge.delete({
+      where: { userId_badgeId: { userId, badgeId } },
+    });
+    await logAudit({
+      action: "user.badge_remove",
+      target: { type: "user", id: userId, label: userLabel(user) },
+      metadata: { badge: badge.slug, badgeLabel: badge.labelAr },
+    });
+    revalidatePath("/admin/users");
+    revalidatePath(`/team/${userId}`);
+    return { ok: true as const, attached: false };
+  }
+
+  await prisma.userBadge.create({
+    data: {
+      userId,
+      badgeId,
+      assignedById: session.user.id,
+    },
+  });
+  await logAudit({
+    action: "user.badge_add",
+    target: { type: "user", id: userId, label: userLabel(user) },
+    metadata: { badge: badge.slug, badgeLabel: badge.labelAr },
+  });
+  revalidatePath("/admin/users");
+  revalidatePath(`/team/${userId}`);
+  return { ok: true as const, attached: true };
+}
+
 // Reject a pending sign-up: deletes the row entirely. They can sign in again later
 // which would re-queue them as pending.
 export async function rejectUserAction(id: string) {

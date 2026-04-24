@@ -7,6 +7,7 @@ import { cn } from "@/lib/cn";
 import { createTaskAction } from "@/app/tasks/actions";
 import { useLocale, useT } from "@/lib/i18n/client";
 import { SmartAssigneeSuggestions } from "./smart-assignee-suggestions";
+import { BadgePicker, type BadgeOption } from "./badge-picker";
 
 interface User {
   id: string;
@@ -21,11 +22,18 @@ interface ProjectLite {
 interface Props {
   users: User[];
   projects?: ProjectLite[];
+  badges?: BadgeOption[];
   defaultProjectId?: string;
   label?: string;
 }
 
-export function NewTaskButton({ users, projects, defaultProjectId, label }: Props) {
+export function NewTaskButton({
+  users,
+  projects,
+  badges = [],
+  defaultProjectId,
+  label,
+}: Props) {
   const t = useT();
   const { locale } = useLocale();
   const [open, setOpen] = useState(false);
@@ -39,14 +47,18 @@ export function NewTaskButton({ users, projects, defaultProjectId, label }: Prop
   const [description, setDescription] = useState("");
   const [projectId, setProjectId] = useState<string>(defaultProjectId ?? "");
   const [assigneeId, setAssigneeId] = useState<string>("");
+  const [requiredBadgeSlugs, setRequiredBadgeSlugs] = useState<string[]>([]);
+  const [autoDetectedSlugs, setAutoDetectedSlugs] = useState<string[]>([]);
 
-  // Reset form state whenever the modal closes or reopens.
+  // Reset form state whenever the modal closes/reopens.
   useEffect(() => {
     if (!open) {
       setTitle("");
       setDescription("");
       setProjectId(defaultProjectId ?? "");
       setAssigneeId("");
+      setRequiredBadgeSlugs([]);
+      setAutoDetectedSlugs([]);
       setError(null);
     }
   }, [open, defaultProjectId]);
@@ -116,13 +128,27 @@ export function NewTaskButton({ users, projects, defaultProjectId, label }: Prop
                 />
               </Field>
 
+              {badges.length > 0 && (
+                <div className="sm:col-span-2">
+                  <BadgePicker
+                    badges={badges}
+                    selectedSlugs={requiredBadgeSlugs}
+                    onChange={setRequiredBadgeSlugs}
+                    autoDetectedSlugs={autoDetectedSlugs}
+                    locale={locale}
+                  />
+                </div>
+              )}
+
               <div className="sm:col-span-2">
                 <SmartAssigneeSuggestions
                   title={title}
                   description={description}
                   projectId={projectId || undefined}
+                  requiredBadgeSlugs={requiredBadgeSlugs}
                   selectedAssigneeId={assigneeId}
                   onPick={(id) => setAssigneeId(id)}
+                  onInferredBadges={setAutoDetectedSlugs}
                   locale={locale}
                 />
               </div>
@@ -181,7 +207,9 @@ export function NewTaskButton({ users, projects, defaultProjectId, label }: Prop
                   className="w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 focus:border-emerald-500/50 focus:outline-none"
                 >
                   <option value="todo">{t("taskStatus.todo")}</option>
-                  <option value="in_progress">{t("taskStatus.in_progress")}</option>
+                  <option value="in_progress">
+                    {t("taskStatus.in_progress")}
+                  </option>
                   <option value="in_review">{t("taskStatus.in_review")}</option>
                   <option value="done">{t("taskStatus.done")}</option>
                 </select>
