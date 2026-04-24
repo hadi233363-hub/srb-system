@@ -1,4 +1,4 @@
-import { Archive, Info } from "lucide-react";
+import { Archive, CheckCircle2, Info, XCircle, Zap } from "lucide-react";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db/prisma";
 import { getLocale } from "@/lib/i18n/server";
@@ -27,7 +27,7 @@ export default async function BackupPage() {
     orderBy: { createdAt: "desc" },
     take: 50,
   });
-  const last = runs[0];
+  const lastSuccess = runs.find((r) => r.status === "verified" || r.status === "success");
   const dir = getBackupDir();
 
   return (
@@ -46,10 +46,10 @@ export default async function BackupPage() {
       <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
         <InfoCard
           label={t("backup.lastRun")}
-          value={last ? formatDate(last.createdAt, locale) : t("backup.never")}
+          value={lastSuccess ? formatDate(lastSuccess.createdAt, locale) : t("backup.never")}
           sub={
-            last
-              ? new Date(last.createdAt).toLocaleTimeString(
+            lastSuccess
+              ? new Date(lastSuccess.createdAt).toLocaleTimeString(
                   locale === "en" ? "en-US" : "en",
                   { hour: "2-digit", minute: "2-digit" }
                 )
@@ -58,7 +58,7 @@ export default async function BackupPage() {
         />
         <InfoCard
           label={t("backup.size")}
-          value={last ? formatBytes(last.sizeBytes) : "—"}
+          value={lastSuccess ? formatBytes(lastSuccess.sizeBytes) : "—"}
         />
         <InfoCard
           label={t("backup.location")}
@@ -67,9 +67,9 @@ export default async function BackupPage() {
         />
       </div>
 
-      <div className="rounded-lg border border-sky-500/30 bg-sky-500/5 p-4 text-xs text-sky-300">
+      <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-4 text-xs text-emerald-300">
         <div className="flex items-start gap-2">
-          <Info className="mt-0.5 h-4 w-4 shrink-0" />
+          <Zap className="mt-0.5 h-4 w-4 shrink-0" />
           <span>{t("backup.schedule.hint")}</span>
         </div>
       </div>
@@ -90,9 +90,10 @@ export default async function BackupPage() {
               <thead className="border-b border-zinc-800 bg-zinc-900/60 text-xs text-zinc-500">
                 <tr>
                   <th className="px-4 py-2 text-start font-normal">{t("table.date")}</th>
+                  <th className="px-4 py-2 text-start font-normal">{t("backup.status")}</th>
                   <th className="px-4 py-2 text-start font-normal">{t("backup.trigger")}</th>
+                  <th className="px-4 py-2 text-start font-normal">{t("backup.reason")}</th>
                   <th className="px-4 py-2 text-start font-normal">{t("backup.size")}</th>
-                  <th className="px-4 py-2 text-start font-normal">{t("backup.location")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-800/60">
@@ -108,23 +109,21 @@ export default async function BackupPage() {
                       </div>
                     </td>
                     <td className="px-4 py-3 text-xs">
-                      <span
-                        className={
-                          r.trigger === "scheduled"
-                            ? "rounded-full bg-sky-500/10 px-2 py-0.5 text-[10px] text-sky-400"
-                            : "rounded-full bg-zinc-700/40 px-2 py-0.5 text-[10px] text-zinc-400"
-                        }
-                      >
-                        {r.trigger === "scheduled"
-                          ? t("backup.trigger.scheduled")
-                          : t("backup.trigger.manual")}
-                      </span>
+                      <StatusBadge status={r.status} t={t} />
+                      {r.status === "failed" && r.errorMessage && (
+                        <div className="mt-1 max-w-[200px] truncate text-[10px] text-rose-400/70" title={r.errorMessage} dir="ltr">
+                          {r.errorMessage}
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-xs">
+                      <TriggerBadge trigger={r.trigger} t={t} />
+                    </td>
+                    <td className="px-4 py-3 text-[11px] text-zinc-500">
+                      {r.reason ?? "—"}
                     </td>
                     <td className="px-4 py-3 text-xs tabular-nums text-zinc-300">
-                      {formatBytes(r.sizeBytes)}
-                    </td>
-                    <td className="px-4 py-3 text-[10px] text-zinc-500" dir="ltr">
-                      {r.filePath}
+                      {r.sizeBytes > 0 ? formatBytes(r.sizeBytes) : "—"}
                     </td>
                   </tr>
                 ))}
@@ -134,6 +133,53 @@ export default async function BackupPage() {
         )}
       </section>
     </div>
+  );
+}
+
+function StatusBadge({ status, t }: { status: string; t: (k: string) => string }) {
+  if (status === "failed") {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-rose-500/10 px-2 py-0.5 text-[10px] text-rose-400">
+        <XCircle className="h-3 w-3" />
+        {t("backup.status.failed")}
+      </span>
+    );
+  }
+  if (status === "verified") {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] text-emerald-400">
+        <CheckCircle2 className="h-3 w-3" />
+        {t("backup.status.verified")}
+      </span>
+    );
+  }
+  return (
+    <span className="rounded-full bg-zinc-700/40 px-2 py-0.5 text-[10px] text-zinc-400">
+      {t("backup.status.success")}
+    </span>
+  );
+}
+
+function TriggerBadge({ trigger, t }: { trigger: string; t: (k: string) => string }) {
+  if (trigger === "auto") {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] text-emerald-400">
+        <Zap className="h-3 w-3" />
+        {t("backup.trigger.auto")}
+      </span>
+    );
+  }
+  if (trigger === "scheduled") {
+    return (
+      <span className="rounded-full bg-sky-500/10 px-2 py-0.5 text-[10px] text-sky-400">
+        {t("backup.trigger.scheduled")}
+      </span>
+    );
+  }
+  return (
+    <span className="rounded-full bg-zinc-700/40 px-2 py-0.5 text-[10px] text-zinc-400">
+      {t("backup.trigger.manual")}
+    </span>
   );
 }
 

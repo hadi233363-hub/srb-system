@@ -14,6 +14,7 @@ import { prisma } from "@/lib/db/prisma";
 import { cn } from "@/lib/cn";
 import { getLocale } from "@/lib/i18n/server";
 import { translate, type Locale } from "@/lib/i18n/dict";
+import { BackupHealthWidget } from "@/components/backup-health-widget";
 
 const MS_30D = 30 * 24 * 60 * 60 * 1000;
 
@@ -129,6 +130,8 @@ export default async function OverviewPage() {
           </>
         )}
       </div>
+
+      {isAdmin && <BackupHealthWidget locale={locale} />}
 
       {isEmpty && (
         <div className="rounded-xl border border-emerald-900/40 bg-emerald-950/10 p-6">

@@ -406,11 +406,20 @@ model Equipment {
 
 // Backup run history — records when backups happened and their size.
 model BackupRun {
-  id        String   @id @default(cuid())
-  filePath  String
-  sizeBytes Int
-  createdAt DateTime @default(now())
-  trigger   String   // "manual" | "scheduled"
+  id           String    @id @default(cuid())
+  filePath     String
+  sizeBytes    Int
+  createdAt    DateTime  @default(now())
+  trigger      String    // "manual" | "scheduled" | "auto"
+  // Result of the run. "success" = file written but not yet verified.
+  // "verified" = post-write integrity check passed. "failed" = error captured below.
+  status       String    @default("success")
+  errorMessage String?
+  verifiedAt   DateTime?
+  // Reason the auto-scheduler picked this moment (e.g. "6h elapsed", "5 new transactions").
+  // Null for manual / cron-script runs.
+  reason       String?
 
   @@index([createdAt])
+  @@index([status])
 }
