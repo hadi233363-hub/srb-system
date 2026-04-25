@@ -27,6 +27,21 @@ import { useLocale, useT } from "@/lib/i18n/client";
 
 type Role = "admin" | "manager" | "employee";
 
+// Hide most of the local part of an email so the address can still be
+// recognised by its owner without exposing it to anyone glancing at the screen.
+//   "ahmed.ali@gmail.com"  → "a***@gmail.com"
+//   "x@gmail.com"          → "x***@gmail.com"
+//   "no-domain"            → "no-domain"   (untouched)
+function maskEmail(email: string): string {
+  if (!email) return "";
+  const at = email.lastIndexOf("@");
+  if (at <= 0) return email;
+  const local = email.slice(0, at);
+  const domain = email.slice(at);
+  const head = local.slice(0, 1);
+  return `${head}***${domain}`;
+}
+
 interface NavItem {
   href: string;
   labelKey: string;
@@ -170,8 +185,12 @@ export function Sidebar({ userRole, userName, userEmail, logoPath }: Props) {
               <div className="truncate text-xs font-medium text-zinc-200">
                 {userName}
               </div>
-              <div className="truncate text-[10px] text-zinc-500" dir="ltr">
-                {userEmail}
+              <div
+                className="truncate text-[10px] text-zinc-500"
+                dir="ltr"
+                title={userEmail}
+              >
+                {maskEmail(userEmail)}
               </div>
             </div>
             <span
