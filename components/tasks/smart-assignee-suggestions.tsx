@@ -8,6 +8,7 @@ import { useEffect, useRef, useState } from "react";
 import { Sparkles, CheckCircle2, Briefcase, Users, Clock, Award, AlertCircle } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { csrfFetch } from "@/lib/csrf-client";
 import { translate, type Locale } from "@/lib/i18n/dict";
 
 interface SuggestionReason {
@@ -102,7 +103,7 @@ export function SmartAssigneeSuggestions({
 
     const handle = setTimeout(async () => {
       try {
-        const res = await fetch("/api/tasks/suggest-assignees", {
+        const res = await csrfFetch("/api/tasks/suggest-assignees", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({

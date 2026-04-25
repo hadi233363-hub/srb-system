@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { auth } from "@/auth";
 import { ensureStarted } from "@/lib/sim/engine";
 import {
   boostProjectPriority,
@@ -22,6 +23,10 @@ interface ActionBody {
 }
 
 export async function POST(request: Request) {
+  const session = await auth();
+  if (session?.user?.role !== "admin") {
+    return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  }
   ensureStarted();
   let body: ActionBody;
   try {

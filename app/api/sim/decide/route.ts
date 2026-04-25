@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { auth } from "@/auth";
 import { ensureStarted } from "@/lib/sim/engine";
 import { applyDecision, forceSpawnScenario } from "@/lib/sim/decisions";
 import { getState, broadcast } from "@/lib/sim/state";
@@ -16,6 +17,10 @@ interface SpawnBody {
 }
 
 export async function POST(request: Request) {
+  const session = await auth();
+  if (session?.user?.role !== "admin") {
+    return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  }
   ensureStarted();
   let body: DecideBody | SpawnBody;
   try {

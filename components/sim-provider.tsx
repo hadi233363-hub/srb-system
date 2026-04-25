@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useRef, useState } from "react";
+import { csrfFetch } from "@/lib/csrf-client";
 import type { ActivityEntry, Scenario, SimState } from "@/lib/sim/types";
 
 interface SimContextValue {
@@ -66,7 +67,7 @@ export function SimProvider({ children }: { children: React.ReactNode }) {
 
   const control = async (action: string, value?: number) => {
     try {
-      await fetch("/api/sim/control", {
+      await csrfFetch("/api/sim/control", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action, value }),
@@ -76,7 +77,7 @@ export function SimProvider({ children }: { children: React.ReactNode }) {
 
   const decide = async (scenarioId: string, choiceKey: string) => {
     try {
-      await fetch("/api/sim/decide", {
+      await csrfFetch("/api/sim/decide", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ scenarioId, choiceKey }),
@@ -88,7 +89,7 @@ export function SimProvider({ children }: { children: React.ReactNode }) {
     templateId: string
   ): Promise<{ ok: boolean; scenario?: Scenario; error?: string }> => {
     try {
-      const res = await fetch("/api/sim/decide", {
+      const res = await csrfFetch("/api/sim/decide", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ templateId }),
@@ -104,7 +105,7 @@ export function SimProvider({ children }: { children: React.ReactNode }) {
     params?: Record<string, unknown>
   ): Promise<{ ok: boolean; message: string }> => {
     try {
-      const res = await fetch("/api/sim/action", {
+      const res = await csrfFetch("/api/sim/action", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ type, params }),

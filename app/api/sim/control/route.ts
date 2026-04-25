@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { auth } from "@/auth";
 import { ensureStarted, setPaused, setSpeed } from "@/lib/sim/engine";
 import { resetSim } from "@/lib/sim/state";
 
@@ -11,6 +12,10 @@ interface ControlBody {
 }
 
 export async function POST(request: Request) {
+  const session = await auth();
+  if (session?.user?.role !== "admin") {
+    return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  }
   ensureStarted();
 
   let body: ControlBody;
