@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db/prisma";
 import { auth } from "@/auth";
 import { formatQar, isOverdue } from "@/lib/db/helpers";
 import { cn } from "@/lib/cn";
+import { displayName } from "@/lib/display";
 import { getLocale } from "@/lib/i18n/server";
 import { translate } from "@/lib/i18n/dict";
 
@@ -66,7 +67,11 @@ export default async function TeamPage() {
                 ? "bg-rose-500/10 text-rose-400 border-rose-500/30"
                 : u.role === "manager"
                 ? "bg-amber-500/10 text-amber-400 border-amber-500/30"
+                : u.role === "department_head"
+                ? "bg-sky-500/10 text-sky-400 border-sky-500/30"
                 : "bg-emerald-500/10 text-emerald-400 border-emerald-500/30";
+
+            const handle = displayName(u);
 
             return (
               <Link
@@ -77,11 +82,11 @@ export default async function TeamPage() {
                 <div className="mb-3 flex items-start justify-between gap-2">
                   <div className="flex items-center gap-3">
                     <div className="flex h-11 w-11 items-center justify-center rounded-full bg-zinc-800 text-lg font-semibold text-zinc-200">
-                      {u.name[0]}
+                      {handle[0]?.toUpperCase()}
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="text-sm font-semibold text-zinc-100">
-                        {u.name}
+                        {handle}
                       </div>
                       {u.jobTitle && (
                         <div className="text-[11px] text-zinc-500">
@@ -101,10 +106,13 @@ export default async function TeamPage() {
                 </div>
 
                 <div className="mb-3 space-y-1">
-                  <div className="flex items-center gap-1.5 text-[11px] text-zinc-500" dir="ltr">
-                    <Mail className="h-3 w-3" />
-                    {u.email}
-                  </div>
+                  {/* Real email is president-only — everyone else sees just the phone, if any. */}
+                  {isAdmin && (
+                    <div className="flex items-center gap-1.5 text-[11px] text-zinc-500" dir="ltr">
+                      <Mail className="h-3 w-3" />
+                      {u.email}
+                    </div>
+                  )}
                   {u.phone && (
                     <div className="flex items-center gap-1.5 text-[11px] text-zinc-500" dir="ltr">
                       <Phone className="h-3 w-3" />

@@ -9,6 +9,7 @@ import { Sparkles, CheckCircle2, Briefcase, Users, Clock, Award, AlertCircle } f
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { csrfFetch } from "@/lib/csrf-client";
+import { displayName } from "@/lib/display";
 import { translate, type Locale } from "@/lib/i18n/dict";
 
 interface SuggestionReason {
@@ -29,8 +30,8 @@ interface SuggestionBadge {
 interface AssigneeSuggestion {
   user: {
     id: string;
+    nickname: string | null;
     name: string;
-    email: string;
     jobTitle: string | null;
     department: string | null;
     role: string;
@@ -232,8 +233,9 @@ function SuggestionCard({
   t: (k: string) => string;
 }) {
   const { user, score, reasons, badges } = suggestion;
-  const initials = user.name
-    .split(" ")
+  const handle = displayName(user);
+  const initials = handle
+    .split(/[\s_-]+/)
     .filter(Boolean)
     .slice(0, 2)
     .map((s) => s[0])
@@ -268,7 +270,7 @@ function SuggestionCard({
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
           <span className="truncate text-sm font-semibold text-zinc-100">
-            {user.name}
+            {handle}
           </span>
           {rank === 1 && (
             <span className="rounded-full bg-emerald-500/20 px-1.5 py-0.5 text-[9px] font-bold text-emerald-300">

@@ -25,7 +25,7 @@ export default async function ProjectsPage() {
     prisma.project.findMany({
       include: {
         client: true,
-        lead: { select: { id: true, name: true, email: true } },
+        lead: { select: { id: true, name: true, nickname: true } },
         _count: {
           select: { members: true, tasks: true },
         },
@@ -34,7 +34,7 @@ export default async function ProjectsPage() {
     }),
     prisma.user.findMany({
       where: { active: true },
-      select: { id: true, name: true, email: true, role: true },
+      select: { id: true, name: true, nickname: true, role: true },
       orderBy: { name: "asc" },
     }),
   ]);

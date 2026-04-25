@@ -5,10 +5,13 @@
 // a Google sign-in but the layout shows them a PendingGate; without this
 // check they could still craft raw server-action / fetch calls and mutate
 // data before an admin approves them.
+//
+// Role hierarchy (highest → lowest):
+//   admin (= president) > manager > department_head > employee
 
 import { auth } from "@/auth";
 
-type Role = "admin" | "manager" | "employee";
+type Role = "admin" | "manager" | "department_head" | "employee";
 
 interface ActiveUser {
   id: string;
@@ -17,6 +20,18 @@ interface ActiveUser {
   role: Role;
   active: true;
   department: string | null;
+  nickname: string | null;
+}
+
+const RANK: Record<Role, number> = {
+  admin: 4,
+  manager: 3,
+  department_head: 2,
+  employee: 1,
+};
+
+function atLeast(actual: Role, required: Role): boolean {
+  return RANK[actual] >= RANK[required];
 }
 
 export async function requireActiveUser(): Promise<ActiveUser> {
@@ -31,18 +46,23 @@ export async function requireActiveUser(): Promise<ActiveUser> {
   return user as ActiveUser;
 }
 
-export async function requireManagerOrAdmin(): Promise<ActiveUser> {
+export async function requireRole(min: Role): Promise<ActiveUser> {
   const user = await requireActiveUser();
-  if (user.role !== "admin" && user.role !== "manager") {
+  if (!atLeast(user.role, min)) {
     throw new Error("صلاحيات غير كافية");
   }
   return user;
 }
 
+export async function requireDepartmentHead(): Promise<ActiveUser> {
+  return requireRole("department_head");
+}
+
+export async function requireManagerOrAdmin(): Promise<ActiveUser> {
+  return requireRole("manager");
+}
+
+// President-only (= admin in DB).
 export async function requireAdmin(): Promise<ActiveUser> {
-  const user = await requireActiveUser();
-  if (user.role !== "admin") {
-    throw new Error("صلاحيات غير كافية");
-  }
-  return user;
+  return requireRole("admin");
 }

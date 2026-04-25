@@ -13,6 +13,7 @@ import { prisma } from "@/lib/db/prisma";
 import { getLocale } from "@/lib/i18n/server";
 import { translate } from "@/lib/i18n/dict";
 import { cn } from "@/lib/cn";
+import { displayName } from "@/lib/display";
 import { formatDate, formatQar } from "@/lib/db/helpers";
 import { EquipmentForm } from "./equipment-form";
 import { CheckOutButton } from "./checkout-button";
@@ -51,12 +52,12 @@ export default async function EquipmentPage() {
     prisma.equipment.findMany({
       orderBy: [{ category: "asc" }, { name: "asc" }],
       include: {
-        currentHolder: { select: { id: true, name: true } },
+        currentHolder: { select: { id: true, name: true, nickname: true } },
       },
     }),
     prisma.user.findMany({
       where: { active: true },
-      select: { id: true, name: true },
+      select: { id: true, name: true, nickname: true },
       orderBy: { name: "asc" },
     }),
   ]);
@@ -224,7 +225,7 @@ export default async function EquipmentPage() {
                             {e.currentHolder ? (
                               <div>
                                 <div className="text-xs text-zinc-200">
-                                  {e.currentHolder.name}
+                                  {displayName(e.currentHolder)}
                                 </div>
                                 {e.expectedReturnAt && (
                                   <div className="text-[10px] text-zinc-500">

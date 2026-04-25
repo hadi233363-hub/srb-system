@@ -16,6 +16,7 @@ import {
   generateCsrfToken,
   timingSafeEqual,
 } from "@/lib/csrf";
+import { rateLimit } from "@/lib/rate-limit";
 
 const { auth } = NextAuth(authConfig);
 
@@ -102,6 +103,31 @@ export default auth((req) => {
       !timingSafeEqual(cookieToken, headerToken)
     ) {
       return NextResponse.json({ error: "csrf" }, { status: 403 });
+    }
+  }
+
+  // 3b) Rate limit /api/* mutations: 60 writes / minute / user (or IP if anon).
+  //     Read-only API routes are unlimited; the SSE stream and prefetch fetches
+  //     stay snappy even with the proxy on the hot path.
+  if (path.startsWith("/api/") && !isCsrfExempt(path) && !SAFE_METHODS.has(method)) {
+    const ip =
+      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      req.headers.get("x-real-ip") ||
+      "unknown";
+    const key = req.auth?.user?.email
+      ? `u:${req.auth.user.email}`
+      : `ip:${ip}`;
+    const limit = rateLimit(key, { windowMs: 60_000, max: 60 });
+    if (!limit.allowed) {
+      return NextResponse.json(
+        { error: "rate_limited" },
+        {
+          status: 429,
+          headers: {
+            "Retry-After": String(Math.ceil(limit.retryAfterMs / 1000)),
+          },
+        }
+      );
     }
   }
 

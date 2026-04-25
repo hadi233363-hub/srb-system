@@ -27,7 +27,7 @@ export interface AssigneeSuggestion {
   user: {
     id: string;
     name: string;
-    email: string;
+    nickname: string | null;
     jobTitle: string | null;
     department: string | null;
     role: string;
@@ -87,7 +87,7 @@ export async function suggestAssignees(opts: {
     select: {
       id: true,
       name: true,
-      email: true,
+      nickname: true,
       role: true,
       jobTitle: true,
       department: true,
@@ -221,7 +221,7 @@ export async function suggestAssignees(opts: {
       user: {
         id: user.id,
         name: user.name,
-        email: user.email,
+        nickname: user.nickname,
         jobTitle: user.jobTitle,
         department: user.department,
         role: user.role,

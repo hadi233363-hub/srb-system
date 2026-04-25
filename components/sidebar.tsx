@@ -25,7 +25,7 @@ import {
 import { cn } from "@/lib/cn";
 import { useLocale, useT } from "@/lib/i18n/client";
 
-type Role = "admin" | "manager" | "employee";
+type Role = "admin" | "manager" | "department_head" | "employee";
 
 // Hide most of the local part of an email so the address can still be
 // recognised by its owner without exposing it to anyone glancing at the screen.
@@ -200,6 +200,8 @@ export function Sidebar({ userRole, userName, userEmail, logoPath }: Props) {
                   ? "bg-rose-500/10 text-rose-400"
                   : userRole === "manager"
                   ? "bg-amber-500/10 text-amber-400"
+                  : userRole === "department_head"
+                  ? "bg-sky-500/10 text-sky-400"
                   : "bg-emerald-500/10 text-emerald-400"
               )}
             >
@@ -214,7 +216,6 @@ export function Sidebar({ userRole, userName, userEmail, logoPath }: Props) {
             {t("auth.signout")}
           </button>
         </div>
-        <div className="text-[10px] text-zinc-600">v1.0.0 · Phase 2 real</div>
       </div>
     </aside>
   );

@@ -5,11 +5,13 @@ import { useRouter } from "next/navigation";
 import { Plus, X, Check, Users, Package } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { createShootAction, updateShootAction } from "./actions";
+import { displayName } from "@/lib/display";
 import { useT } from "@/lib/i18n/client";
 
 interface UserLite {
   id: string;
   name: string;
+  nickname: string | null;
 }
 interface ProjectLite {
   id: string;
@@ -310,7 +312,7 @@ export function ShootForm({
                         }
                       >
                         {selected && <Check className="h-3 w-3" />}
-                        {u.name}
+                        {displayName(u)}
                       </button>
                     );
                   })}

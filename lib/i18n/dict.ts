@@ -21,10 +21,28 @@ export const DICT: Record<string, { ar: string; en: string }> = {
   "nav.reports": { ar: "التقارير", en: "Reports" },
   "nav.admin_users": { ar: "إدارة الحسابات", en: "User management" },
 
-  // Roles
-  "role.admin": { ar: "مدير", en: "Admin" },
-  "role.manager": { ar: "رئيس قسم", en: "Manager" },
+  // Roles — admin is the president (top of the hierarchy).
+  "role.admin": { ar: "الرئيس", en: "President" },
+  "role.manager": { ar: "المدير", en: "Manager" },
+  "role.department_head": { ar: "رئيس قسم", en: "Department head" },
   "role.employee": { ar: "موظف", en: "Employee" },
+
+  // Onboarding — nickname picker shown right after sign-in approval.
+  "onboarding.nickname.title": { ar: "اختر اسم مستعار", en: "Pick a nickname" },
+  "onboarding.nickname.body": {
+    ar: "بيظهر هذا الاسم لزملائك بدل إيميلك. خلّيه قصير وواضح.",
+    en: "This name shows to your teammates instead of your email. Keep it short and clear.",
+  },
+  "onboarding.nickname.placeholder": { ar: "مثال: hadi", en: "e.g. hadi" },
+  "onboarding.nickname.save": { ar: "حفظ ومتابعة", en: "Save and continue" },
+  "onboarding.nickname.taken": {
+    ar: "هذا الاسم مستخدم. اختر غيره.",
+    en: "That nickname is taken. Pick another.",
+  },
+  "onboarding.nickname.invalid": {
+    ar: "الاسم بين 2 و 24 حرف، حروف وأرقام و _ - فقط.",
+    en: "Nickname must be 2–24 chars: letters, digits, _ and -.",
+  },
 
   // Auth
   "auth.signout": { ar: "تسجيل خروج", en: "Sign out" },
@@ -393,8 +411,9 @@ export const DICT: Record<string, { ar: string; en: string }> = {
   "risk.healthy.detailMargin": { ar: "بهامش", en: "at a margin of" },
 
   // Roles
-  "role.labelAdmin": { ar: "مدير", en: "Admin" },
-  "role.labelManager": { ar: "رئيس قسم", en: "Manager" },
+  "role.labelAdmin": { ar: "الرئيس", en: "President" },
+  "role.labelManager": { ar: "المدير", en: "Manager" },
+  "role.labelDepartmentHead": { ar: "رئيس قسم", en: "Department head" },
   "role.labelEmployee": { ar: "موظف", en: "Employee" },
 
   // Project status

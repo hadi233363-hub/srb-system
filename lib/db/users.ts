@@ -52,12 +52,13 @@ export async function listUsersWithBadges(options?: {
 export async function createUser(input: {
   email: string;
   name: string;
-  role: "admin" | "manager" | "employee";
+  role: "admin" | "manager" | "department_head" | "employee";
   department?: string | null;
   jobTitle?: string | null;
   phone?: string | null;
   salaryQar?: number | null;
   hiredAt?: Date | null;
+  nickname?: string | null;
 }): Promise<User> {
   return prisma.user.create({
     data: {
@@ -69,6 +70,7 @@ export async function createUser(input: {
       phone: input.phone ?? null,
       salaryQar: input.salaryQar ?? null,
       hiredAt: input.hiredAt ?? null,
+      nickname: input.nickname ?? null,
     },
   });
 }
@@ -79,6 +81,7 @@ export async function updateUser(
     Pick<
       User,
       | "name"
+      | "nickname"
       | "role"
       | "department"
       | "active"

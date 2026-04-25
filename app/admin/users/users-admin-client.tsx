@@ -15,11 +15,12 @@ import {
   toggleUserBadgeAction,
 } from "./actions";
 
-type AuthRole = "admin" | "manager" | "employee";
+type AuthRole = "admin" | "manager" | "department_head" | "employee";
 
 const ROLE_COLOR: Record<AuthRole, string> = {
   admin: "bg-rose-500/10 text-rose-400 border-rose-500/30",
   manager: "bg-amber-500/10 text-amber-400 border-amber-500/30",
+  department_head: "bg-sky-500/10 text-sky-400 border-sky-500/30",
   employee: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30",
 };
 
@@ -171,6 +172,7 @@ export function UsersAdminClient({
               >
                 <option value="admin">{t("admin.users.roleOptAdmin")}</option>
                 <option value="manager">{t("admin.users.roleOptManager")}</option>
+                <option value="department_head">{t("role.department_head")}</option>
                 <option value="employee">{t("admin.users.roleOptEmployee")}</option>
               </select>
             </Field>
@@ -268,6 +270,7 @@ export function UsersAdminClient({
                     >
                       <option value="admin">{roleLabel("admin")}</option>
                       <option value="manager">{roleLabel("manager")}</option>
+                      <option value="department_head">{roleLabel("department_head")}</option>
                       <option value="employee">{roleLabel("employee")}</option>
                     </select>
                     <button
@@ -478,6 +481,7 @@ function PendingRow({
             className="rounded-md border border-amber-500/30 bg-zinc-950 px-2 py-1 text-xs text-zinc-100"
           >
             <option value="employee">{t("role.employee")}</option>
+            <option value="department_head">{t("role.department_head")}</option>
             <option value="manager">{t("role.manager")}</option>
             <option value="admin">{t("role.admin")}</option>
           </select>

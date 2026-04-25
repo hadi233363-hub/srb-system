@@ -12,10 +12,10 @@ export default async function TasksPage() {
   const [tasks, users, projects, badges] = await Promise.all([
     prisma.task.findMany({
       include: {
-        assignee: { select: { id: true, name: true } },
+        assignee: { select: { id: true, name: true, nickname: true } },
         project: { select: { id: true, title: true } },
         collaborators: {
-          include: { user: { select: { id: true, name: true } } },
+          include: { user: { select: { id: true, name: true, nickname: true } } },
         },
         _count: { select: { comments: true } },
       },
@@ -23,7 +23,7 @@ export default async function TasksPage() {
     }),
     prisma.user.findMany({
       where: { active: true },
-      select: { id: true, name: true, email: true },
+      select: { id: true, name: true, nickname: true },
       orderBy: { name: "asc" },
     }),
     prisma.project.findMany({

@@ -5,12 +5,13 @@ import { useRouter } from "next/navigation";
 import { Plus, X } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { createProjectAction } from "./actions";
+import { displayName } from "@/lib/display";
 import { useT } from "@/lib/i18n/client";
 
 interface User {
   id: string;
   name: string;
-  email: string;
+  nickname: string | null;
   role: string;
 }
 
@@ -185,7 +186,7 @@ export function NewProjectButton({ users }: { users: User[] }) {
                   <option value="">{t("tasks.unassigned")}</option>
                   {users.map((u) => (
                     <option key={u.id} value={u.id}>
-                      {u.name} ({u.email})
+                      {displayName(u)}
                     </option>
                   ))}
                 </select>

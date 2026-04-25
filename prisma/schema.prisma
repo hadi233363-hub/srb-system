@@ -16,7 +16,12 @@ model User {
   id          String    @id @default(cuid())
   email       String    @unique
   name        String
-  role        String    @default("employee") // admin | manager | employee
+  // Public-facing handle the user picks on first sign-in. Replaces the email/name
+  // in every list, mention, and assignee picker — only the president (role=admin)
+  // sees real emails. Nullable so newly-approved users get redirected to the
+  // /onboarding/nickname gate the first time they land in the app.
+  nickname    String?   @unique
+  role        String    @default("employee") // admin (= president) | manager | department_head | employee
   department  String?
   active      Boolean   @default(true)
   // First-approval timestamp. null = pending admin approval (never approved yet).

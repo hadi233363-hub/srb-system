@@ -20,6 +20,7 @@ import {
 import { KanbanBoard } from "@/components/tasks/kanban-board";
 import { NewTaskButton } from "@/components/tasks/new-task-button";
 import { ProjectMembersManager } from "./members-manager";
+import { displayName } from "@/lib/display";
 import { ProjectActionsMenu } from "./project-actions-menu";
 import { getLocale } from "@/lib/i18n/server";
 import { translate } from "@/lib/i18n/dict";
@@ -38,14 +39,14 @@ export default async function ProjectDetailPage(props: {
     where: { id },
     include: {
       client: true,
-      lead: { select: { id: true, name: true, email: true } },
+      lead: { select: { id: true, name: true, nickname: true } },
       members: {
         include: {
           user: {
             select: {
               id: true,
               name: true,
-              email: true,
+              nickname: true,
               role: true,
               jobTitle: true,
               department: true,
@@ -55,10 +56,10 @@ export default async function ProjectDetailPage(props: {
       },
       tasks: {
         include: {
-          assignee: { select: { id: true, name: true } },
+          assignee: { select: { id: true, name: true, nickname: true } },
           project: { select: { id: true, title: true } },
           collaborators: {
-            include: { user: { select: { id: true, name: true } } },
+            include: { user: { select: { id: true, name: true, nickname: true } } },
           },
         },
         orderBy: [{ priority: "desc" }, { dueAt: "asc" }],
@@ -74,7 +75,7 @@ export default async function ProjectDetailPage(props: {
       select: {
         id: true,
         name: true,
-        email: true,
+        nickname: true,
         role: true,
         jobTitle: true,
         department: true,
@@ -244,10 +245,10 @@ export default async function ProjectDetailPage(props: {
                 className="flex items-center gap-3 rounded-lg border border-zinc-800 bg-zinc-900/40 p-3"
               >
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-zinc-800 text-sm font-semibold">
-                  {m.user.name[0]}
+                  {displayName(m.user)[0]?.toUpperCase()}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="truncate text-sm text-zinc-100">{m.user.name}</div>
+                  <div className="truncate text-sm text-zinc-100">{displayName(m.user)}</div>
                   <div className="truncate text-[11px] text-zinc-500">
                     {m.role ? m.role : m.user.jobTitle || m.user.role}
                   </div>
@@ -265,7 +266,7 @@ export default async function ProjectDetailPage(props: {
             {t("page.tasks.title")} ({project.tasks.length})
           </h2>
           <NewTaskButton
-            users={allUsers.map((u) => ({ id: u.id, name: u.name, email: u.email }))}
+            users={allUsers.map((u) => ({ id: u.id, name: u.name, nickname: u.nickname }))}
             badges={allBadges}
             defaultProjectId={project.id}
             label={t("projects.addTaskToProject")}
@@ -289,7 +290,7 @@ export default async function ProjectDetailPage(props: {
               estimatedHours: t.estimatedHours,
               collaborators: t.collaborators,
             }))}
-            users={allUsers.map((u) => ({ id: u.id, name: u.name, email: u.email }))}
+            users={allUsers.map((u) => ({ id: u.id, name: u.name, nickname: u.nickname }))}
           />
         )}
       </section>

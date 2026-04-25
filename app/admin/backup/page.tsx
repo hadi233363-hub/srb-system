@@ -4,7 +4,6 @@ import { prisma } from "@/lib/db/prisma";
 import { getLocale } from "@/lib/i18n/server";
 import { translate } from "@/lib/i18n/dict";
 import { formatDate } from "@/lib/db/helpers";
-import { getBackupDir } from "@/lib/db/backup";
 import { RunBackupButton } from "./run-button";
 
 export default async function BackupPage() {
@@ -28,7 +27,6 @@ export default async function BackupPage() {
     take: 50,
   });
   const lastSuccess = runs.find((r) => r.status === "verified" || r.status === "success");
-  const dir = getBackupDir();
 
   return (
     <div className="space-y-6">
@@ -43,7 +41,7 @@ export default async function BackupPage() {
         <RunBackupButton />
       </div>
 
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
         <InfoCard
           label={t("backup.lastRun")}
           value={lastSuccess ? formatDate(lastSuccess.createdAt, locale) : t("backup.never")}
@@ -59,11 +57,6 @@ export default async function BackupPage() {
         <InfoCard
           label={t("backup.size")}
           value={lastSuccess ? formatBytes(lastSuccess.sizeBytes) : "—"}
-        />
-        <InfoCard
-          label={t("backup.location")}
-          value={dir}
-          dir="ltr"
         />
       </div>
 

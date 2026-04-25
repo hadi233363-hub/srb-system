@@ -5,6 +5,7 @@ import "./globals.css";
 import { Sidebar } from "@/components/sidebar";
 import { TopbarReal } from "@/components/topbar-real";
 import { PendingGate } from "@/components/pending-gate";
+import { NicknameGate } from "@/components/nickname-gate";
 import { MeetingReminder } from "@/components/meeting-reminder";
 import { InvoiceReminder } from "@/components/invoice-reminder";
 import { auth } from "@/auth";
@@ -21,6 +22,13 @@ const cairo = Cairo({
 export const metadata: Metadata = {
   title: "SRB — Internal Management",
   description: "SRB internal management system",
+  // Internal-only system — never index or follow.
+  robots: {
+    index: false,
+    follow: false,
+    nocache: true,
+    googleBot: { index: false, follow: false },
+  },
 };
 
 export const viewport = {
@@ -72,21 +80,25 @@ export default async function RootLayout({
         <LocaleProvider locale={locale}>
           {user ? (
             isActive ? (
-              <div className="flex min-h-dvh">
-                <Sidebar
-                  userRole={user.role}
-                  userName={user.name ?? user.email ?? "User"}
-                  userEmail={user.email ?? ""}
-                  logoPath={settings?.logoPath ?? "/srb-logo-white.png"}
-                />
-                <div className="flex min-w-0 flex-1 flex-col">
-                  <TopbarReal />
-                  <main className="flex-1 overflow-auto p-4 md:p-6">{children}</main>
+              user.nickname ? (
+                <div className="flex min-h-dvh">
+                  <Sidebar
+                    userRole={user.role}
+                    userName={user.nickname}
+                    userEmail={user.email ?? ""}
+                    logoPath={settings?.logoPath ?? "/srb-logo-white.png"}
+                  />
+                  <div className="flex min-w-0 flex-1 flex-col">
+                    <TopbarReal />
+                    <main className="flex-1 overflow-auto p-4 md:p-6">{children}</main>
+                  </div>
+                  {/* Background reminder pollers — fire desktop notifications. */}
+                  <MeetingReminder />
+                  <InvoiceReminder />
                 </div>
-                {/* Background reminder pollers — fire desktop notifications. */}
-                <MeetingReminder />
-                <InvoiceReminder />
-              </div>
+              ) : (
+                <NicknameGate userName={user.name ?? user.email ?? "User"} />
+              )
             ) : (
               <PendingGate
                 userName={user.name ?? user.email ?? "User"}

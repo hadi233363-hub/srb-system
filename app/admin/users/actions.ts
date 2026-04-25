@@ -11,7 +11,7 @@ import { prisma } from "@/lib/db/prisma";
 import { logAudit } from "@/lib/db/audit";
 import { requireAdmin as requireAdminUser } from "@/lib/auth-guards";
 
-type Role = "admin" | "manager" | "employee";
+type Role = "admin" | "manager" | "department_head" | "employee";
 
 async function requireAdmin() {
   const user = await requireAdminUser();
@@ -33,7 +33,7 @@ export async function addUserAction(formData: FormData) {
   if (!email || !name || !role) {
     return { ok: false, message: "كل الخانات مطلوبة" };
   }
-  if (!["admin", "manager", "employee"].includes(role)) {
+  if (!["admin", "manager", "department_head", "employee"].includes(role)) {
     return { ok: false, message: "الدور غير صحيح" };
   }
   if (await findUserByEmail(email)) {
@@ -109,7 +109,7 @@ export async function approveUserAction(
   department: string | null
 ) {
   await requireAdmin();
-  if (!["admin", "manager", "employee"].includes(role)) {
+  if (!["admin", "manager", "department_head", "employee"].includes(role)) {
     return { ok: false, message: "الدور غير صحيح" };
   }
   const updated = await prisma.user.update({

@@ -21,6 +21,7 @@ import { prisma } from "@/lib/db/prisma";
 import { getLocale } from "@/lib/i18n/server";
 import { translate } from "@/lib/i18n/dict";
 import { cn } from "@/lib/cn";
+import { displayName } from "@/lib/display";
 import { ShootActions } from "../shoot-actions";
 
 const STATUS_STYLE: Record<string, string> = {
@@ -67,7 +68,7 @@ export default async function ShootDetailPage(props: {
       crew: {
         include: {
           user: {
-            select: { id: true, name: true, email: true, jobTitle: true, role: true },
+            select: { id: true, name: true, nickname: true, jobTitle: true, role: true },
           },
         },
       },
@@ -102,7 +103,7 @@ export default async function ShootDetailPage(props: {
     ? await Promise.all([
         prisma.user.findMany({
           where: { active: true },
-          select: { id: true, name: true },
+          select: { id: true, name: true, nickname: true },
           orderBy: { name: "asc" },
         }),
         prisma.project.findMany({
@@ -242,7 +243,7 @@ export default async function ShootDetailPage(props: {
             primary={`${shoot.crew.length} ${t("shoots.crewCount")}`}
             secondary={
               shoot.crew.length > 0
-                ? shoot.crew.map((c) => c.user.name).join(" · ")
+                ? shoot.crew.map((c) => displayName(c.user)).join(" · ")
                 : t("shoots.noCrew")
             }
           />
@@ -352,7 +353,7 @@ export default async function ShootDetailPage(props: {
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-sm text-zinc-100">
-                    {c.user.name}
+                    {displayName(c.user)}
                   </div>
                   <div className="truncate text-[11px] text-zinc-500">
                     {c.user.jobTitle ?? t(`role.${c.user.role}`)}

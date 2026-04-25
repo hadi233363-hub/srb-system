@@ -4,11 +4,13 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { UserCheck, UserX, X } from "lucide-react";
 import { checkInEquipmentAction, checkOutEquipmentAction } from "./actions";
+import { displayName } from "@/lib/display";
 import { useT } from "@/lib/i18n/client";
 
 interface UserLite {
   id: string;
   name: string;
+  nickname: string | null;
 }
 
 interface Props {
@@ -105,7 +107,7 @@ export function CheckOutButton({
                   <option value="">—</option>
                   {users.map((u) => (
                     <option key={u.id} value={u.id}>
-                      {u.name}
+                      {displayName(u)}
                     </option>
                   ))}
                 </select>

@@ -15,6 +15,7 @@ import { prisma } from "@/lib/db/prisma";
 import { getLocale } from "@/lib/i18n/server";
 import { translate } from "@/lib/i18n/dict";
 import { cn } from "@/lib/cn";
+import { displayName } from "@/lib/display";
 import { ShootForm } from "./shoot-form";
 import { CalendarView } from "../meetings/calendar-view";
 import { ShootActions } from "./shoot-actions";
@@ -32,7 +33,7 @@ export default async function ShootsPage() {
       include: {
         project: { select: { id: true, title: true } },
         crew: {
-          include: { user: { select: { id: true, name: true } } },
+          include: { user: { select: { id: true, name: true, nickname: true } } },
         },
         equipment: {
           include: {
@@ -46,7 +47,7 @@ export default async function ShootsPage() {
     }),
     prisma.user.findMany({
       where: { active: true },
-      select: { id: true, name: true },
+      select: { id: true, name: true, nickname: true },
       orderBy: { name: "asc" },
     }),
     prisma.project.findMany({
@@ -277,7 +278,7 @@ function ShootCard({
   locale: "ar" | "en";
   t: (k: string) => string;
   canManage: boolean;
-  users: { id: string; name: string }[];
+  users: { id: string; name: string; nickname: string | null }[];
   projects: { id: string; title: string }[];
   equipment: { id: string; name: string; category: string }[];
 }) {
@@ -403,7 +404,7 @@ function ShootCard({
                   key={c.user.id}
                   className="rounded-full border border-zinc-700 bg-zinc-900/60 px-2 py-0.5 text-[10px] text-zinc-300"
                 >
-                  {c.user.name}
+                  {displayName(c.user)}
                 </span>
               ))}
             </div>
@@ -517,7 +518,7 @@ function detectConflicts(
       const bStart = b.shootDate.getTime();
       const bEnd = bStart + b.durationHours * 3600_000;
       if (aStart < bEnd && bStart < aEnd) {
-        const aUsers = new Map(a.crew.map((c) => [c.user.id, c.user.name]));
+        const aUsers = new Map(a.crew.map((c) => [c.user.id, displayName(c.user)]));
         for (const c of b.crew) {
           if (aUsers.has(c.user.id)) {
             conflicts.push({

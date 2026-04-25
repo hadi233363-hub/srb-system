@@ -17,6 +17,7 @@ import {
   Mail,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { displayName } from "@/lib/display";
 import { useT, useLocale } from "@/lib/i18n/client";
 import { deleteMeetingAction, updateMeetingAction } from "./actions";
 import { MeetingForm } from "./meeting-form";
@@ -42,12 +43,13 @@ interface Meeting {
   outcomeNotes: string | null;
   ownerId: string | null;
   reminderSentAt: Date | null;
-  owner: { id: string; name: string } | null;
+  owner: { id: string; name: string; nickname: string | null } | null;
 }
 
 interface UserLite {
   id: string;
   name: string;
+  nickname: string | null;
 }
 
 interface Props {
@@ -274,7 +276,7 @@ export function MeetingsList({ meetings, users, currentUserId, canManage }: Prop
                             {m.owner && (
                               <span className="flex items-center gap-1">
                                 <UserCheck className="h-3 w-3" />
-                                {m.owner.name}
+                                {displayName(m.owner)}
                               </span>
                             )}
                           </div>

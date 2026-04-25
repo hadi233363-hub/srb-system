@@ -18,12 +18,12 @@ export default async function MeetingsPage() {
   const [meetings, users] = await Promise.all([
     prisma.clientMeeting.findMany({
       orderBy: { meetingAt: "desc" },
-      include: { owner: { select: { id: true, name: true } } },
+      include: { owner: { select: { id: true, name: true, nickname: true } } },
       take: 500,
     }),
     prisma.user.findMany({
       where: { active: true },
-      select: { id: true, name: true },
+      select: { id: true, name: true, nickname: true },
       orderBy: { name: "asc" },
     }),
   ]);

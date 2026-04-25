@@ -27,7 +27,7 @@ interface Shoot {
 
 interface Props {
   shoot: Shoot;
-  users: { id: string; name: string }[];
+  users: { id: string; name: string; nickname: string | null }[];
   projects: { id: string; title: string }[];
   equipment: { id: string; name: string; category: string }[];
 }

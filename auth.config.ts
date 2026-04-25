@@ -18,8 +18,13 @@ export default {
     async session({ session, token }) {
       if (session.user) {
         session.user.role =
-          (token.role as "admin" | "manager" | "employee") ?? "employee";
+          (token.role as
+            | "admin"
+            | "manager"
+            | "department_head"
+            | "employee") ?? "employee";
         session.user.active = (token.active as boolean | undefined) ?? false;
+        session.user.nickname = (token.nickname as string | null) ?? null;
       }
       return session;
     },

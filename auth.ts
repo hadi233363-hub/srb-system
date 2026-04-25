@@ -58,11 +58,16 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
         const user = await findUserByEmail(token.email);
         if (user) {
           token.userId = user.id;
-          token.role = user.role as "admin" | "manager" | "employee";
+          token.role = user.role as
+            | "admin"
+            | "manager"
+            | "department_head"
+            | "employee";
           token.department = user.department;
           token.name = user.name;
           token.active = user.active;
           token.approved = !!user.approvedAt;
+          token.nickname = user.nickname;
         }
       }
       return token;
@@ -71,10 +76,15 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
       if (session.user && token.userId) {
         session.user.id = token.userId as string;
         session.user.role =
-          (token.role as "admin" | "manager" | "employee") ?? "employee";
+          (token.role as
+            | "admin"
+            | "manager"
+            | "department_head"
+            | "employee") ?? "employee";
         session.user.department = (token.department as string | null) ?? null;
         session.user.active = (token.active as boolean | undefined) ?? false;
         session.user.approved = (token.approved as boolean | undefined) ?? false;
+        session.user.nickname = (token.nickname as string | null) ?? null;
       }
       return session;
     },

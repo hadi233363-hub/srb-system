@@ -6,6 +6,7 @@ import { Check, Trash2, UserIcon, UserPlus, X } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { deleteTaskAction, updateTaskAction } from "@/app/tasks/actions";
 import { isOverdue } from "@/lib/db/helpers";
+import { displayName } from "@/lib/display";
 import { useT } from "@/lib/i18n/client";
 
 const TASK_STATUSES = ["todo", "in_progress", "in_review", "done", "blocked"] as const;
@@ -27,7 +28,7 @@ export interface TaskDetail {
 export interface UserLite {
   id: string;
   name: string;
-  email: string;
+  nickname: string | null;
 }
 
 export interface ProjectLite {
@@ -303,10 +304,7 @@ export function TaskDetailModal({
                           className="flex w-full items-center gap-2 px-3 py-2 text-right text-xs text-zinc-300 hover:bg-zinc-800"
                         >
                           <UserIcon className="h-3 w-3" />
-                          <span className="flex-1">{u.name}</span>
-                          <span className="text-[10px] text-zinc-500" dir="ltr">
-                            {u.email}
-                          </span>
+                          <span className="flex-1">{displayName(u)}</span>
                         </button>
                       ))}
                     </div>

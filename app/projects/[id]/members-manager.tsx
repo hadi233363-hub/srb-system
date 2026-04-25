@@ -3,12 +3,13 @@
 import { useState, useTransition } from "react";
 import { UserPlus, X } from "lucide-react";
 import { addMemberAction, removeMemberAction } from "../actions";
+import { displayName } from "@/lib/display";
 import { useT } from "@/lib/i18n/client";
 
 interface User {
   id: string;
   name: string;
-  email: string;
+  nickname: string | null;
   role: string;
   jobTitle: string | null;
   department: string | null;
@@ -85,7 +86,7 @@ export function ProjectMembersManager({
                     {currentMembers.map((m) => (
                       <li key={m.userId} className="flex items-center justify-between p-2">
                         <div>
-                          <div className="text-sm text-zinc-200">{m.user.name}</div>
+                          <div className="text-sm text-zinc-200">{displayName(m.user)}</div>
                           <div className="text-[11px] text-zinc-500">
                             {m.role || m.user.jobTitle || m.user.role}
                           </div>
@@ -155,8 +156,7 @@ function AddRow({
   return (
     <li className="flex items-center gap-2 p-2">
       <div className="min-w-0 flex-1">
-        <div className="text-sm text-zinc-200">{user.name}</div>
-        <div className="text-[11px] text-zinc-500">{user.email}</div>
+        <div className="text-sm text-zinc-200">{displayName(user)}</div>
       </div>
       <input
         value={role}

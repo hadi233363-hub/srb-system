@@ -20,6 +20,7 @@ import {
   isOverdue,
 } from "@/lib/db/helpers";
 import { KanbanBoard } from "@/components/tasks/kanban-board";
+import { displayName } from "@/lib/display";
 import { getLocale } from "@/lib/i18n/server";
 import { translate } from "@/lib/i18n/dict";
 
@@ -83,7 +84,7 @@ export default async function EmployeeDetailPage(props: {
 
   const allUsers = await prisma.user.findMany({
     where: { active: true },
-    select: { id: true, name: true, email: true },
+    select: { id: true, name: true, nickname: true },
     orderBy: { name: "asc" },
   });
 
@@ -124,6 +125,8 @@ export default async function EmployeeDetailPage(props: {
       ? "bg-rose-500/10 text-rose-400 border-rose-500/30"
       : user.role === "manager"
       ? "bg-amber-500/10 text-amber-400 border-amber-500/30"
+      : user.role === "department_head"
+      ? "bg-sky-500/10 text-sky-400 border-sky-500/30"
       : "bg-emerald-500/10 text-emerald-400 border-emerald-500/30";
 
   return (
@@ -140,11 +143,11 @@ export default async function EmployeeDetailPage(props: {
       <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-5">
         <div className="flex flex-wrap items-start gap-4">
           <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-zinc-800 text-2xl font-bold text-zinc-100">
-            {user.name[0]}
+            {displayName(user)[0]?.toUpperCase()}
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-2xl font-bold text-zinc-100">{user.name}</h1>
+              <h1 className="text-2xl font-bold text-zinc-100">{displayName(user)}</h1>
               <span className={cn("rounded-full border px-2 py-0.5 text-[10px]", roleColor)}>
                 {t(`role.${user.role}`) ?? user.role}
               </span>
@@ -181,10 +184,13 @@ export default async function EmployeeDetailPage(props: {
               </div>
             )}
             <div className="mt-3 flex flex-wrap gap-4 text-xs text-zinc-400">
-              <span className="flex items-center gap-1.5" dir="ltr">
-                <Mail className="h-3 w-3" />
-                {user.email}
-              </span>
+              {/* Real email is president-only. */}
+              {isAdmin && (
+                <span className="flex items-center gap-1.5" dir="ltr">
+                  <Mail className="h-3 w-3" />
+                  {user.email}
+                </span>
+              )}
               {user.phone && (
                 <span className="flex items-center gap-1.5" dir="ltr">
                   <Phone className="h-3 w-3" />

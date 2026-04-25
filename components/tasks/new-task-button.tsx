@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Plus, X } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { createTaskAction } from "@/app/tasks/actions";
+import { displayName } from "@/lib/display";
 import { useLocale, useT } from "@/lib/i18n/client";
 import { SmartAssigneeSuggestions } from "./smart-assignee-suggestions";
 import { BadgePicker, type BadgeOption } from "./badge-picker";
@@ -12,7 +13,7 @@ import { BadgePicker, type BadgeOption } from "./badge-picker";
 interface User {
   id: string;
   name: string;
-  email: string;
+  nickname: string | null;
 }
 interface ProjectLite {
   id: string;
@@ -181,7 +182,7 @@ export function NewTaskButton({
                   <option value="">{t("tasks.unassigned")}</option>
                   {users.map((u) => (
                     <option key={u.id} value={u.id}>
-                      {u.name}
+                      {displayName(u)}
                     </option>
                   ))}
                 </select>
