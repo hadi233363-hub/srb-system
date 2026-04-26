@@ -12,11 +12,17 @@ generator client {
 
 // Login + role; mirrors the existing auth.db.authorized_users table,
 // but owned by Prisma going forward (single source of truth).
+//
+// Role hierarchy (top → bottom), enforced by lib/auth/roles.ts:
+//   admin           → الرئيس (President / Owner) — sees full finance, total control
+//   manager         → المدير — approves users, assigns roles up to dept_lead, runs ops
+//   department_lead → رئيس قسم — manages their dept's projects, expenses, salaries, income
+//   employee        → موظف — works on own tasks
 model User {
   id          String    @id @default(cuid())
   email       String    @unique
   name        String
-  role        String    @default("employee") // admin | manager | employee
+  role        String    @default("employee") // admin | manager | department_lead | employee
   department  String?
   active      Boolean   @default(true)
   // First-approval timestamp. null = pending admin approval (never approved yet).
@@ -46,6 +52,7 @@ model User {
   heldEquipment      Equipment[]        @relation("EquipmentHolder")
   badges             UserBadge[]
   badgesAssigned     UserBadge[]        @relation("BadgeAssignedBy")
+  notifications      Notification[]     @relation("NotificationRecipient")
 
   @@index([active])
   @@index([role])
@@ -179,6 +186,14 @@ model Task {
   order          Int       @default(0) // for Kanban column ordering
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
+
+  // Reminder fire tracking — fired by /api/tasks/upcoming poller (1 hour before
+  // dueAt) and /api/tasks/overdue (when dueAt has passed but the task is still
+  // open AND project.deadlineAt has NOT yet passed — i.e. the slack window where
+  // a task is late but the project can still be saved). Reset to null when
+  // dueAt is rescheduled forward so a fresh reminder fires for the new window.
+  reminderBeforeSentAt  DateTime?
+  reminderOverdueSentAt DateTime?
 
   comments      TaskComment[]
   updates       TaskUpdate[]
@@ -442,6 +457,53 @@ model Equipment {
   @@index([category])
   @@index([condition])
   @@index([currentHolderId])
+}
+
+// Per-user notification inbox. Powers the bell icon in the topbar and the
+// /notifications page. Used for: task-deadline alerts, role/permission changes,
+// project assignments, mentions in comments, financial threshold warnings (owner
+// only), and any event the system wants to deliver to a specific user.
+//
+// Reminders that fire as desktop notifications (meetings, shoots, invoices)
+// also write a Notification row so the user has a permanent record they can
+// review later from any device.
+model Notification {
+  id          String   @id @default(cuid())
+  recipientId String
+  recipient   User     @relation("NotificationRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+
+  // Type slug — drives the icon, color and click target. Examples:
+  //   task.due_soon, task.overdue, task.assigned, task.commented
+  //   project.assigned, project.deadline_soon, project.completed
+  //   meeting.soon, shoot.soon, invoice.due
+  //   user.approved, user.role_changed
+  //   finance.threshold (owner only)
+  //   system.info
+  kind     String
+  // Severity — drives color in the bell. info = neutral, success = green,
+  // warning = amber, danger = red.
+  severity String   @default("info") // info | success | warning | danger
+
+  // Short title (one line). Stored already-localized in the user's language at
+  // creation time — keeping it simple. We can switch to i18n keys later.
+  title    String
+  // Optional longer body shown in the inbox panel.
+  body     String?
+  // Optional link the bell should navigate to when clicked.
+  linkUrl  String?
+
+  // Reference fields — let the inbox dedupe and the click handler open the
+  // right entity. Loose pointers (no FK) so deleting a project doesn't cascade
+  // away the notification — past notifications stay readable.
+  refType String? // task | project | meeting | shoot | transaction | user
+  refId   String?
+
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([recipientId, createdAt])
+  @@index([recipientId, readAt])
+  @@index([refType, refId])
 }
 
 // Backup run history — records when backups happened and their size.

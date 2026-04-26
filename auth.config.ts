@@ -7,6 +7,7 @@
 
 import type { NextAuthConfig } from "next-auth";
 import Google from "next-auth/providers/google";
+import type { Role } from "@/lib/auth/roles";
 
 export default {
   providers: [Google],
@@ -17,8 +18,7 @@ export default {
   callbacks: {
     async session({ session, token }) {
       if (session.user) {
-        session.user.role =
-          (token.role as "admin" | "manager" | "employee") ?? "employee";
+        session.user.role = (token.role as Role) ?? "employee";
         session.user.active = (token.active as boolean | undefined) ?? false;
       }
       return session;

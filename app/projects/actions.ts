@@ -6,7 +6,7 @@ import { prisma } from "@/lib/db/prisma";
 import { logAudit } from "@/lib/db/audit";
 import {
   requireActiveUser as requireAuth,
-  requireManagerOrAdmin,
+  requireDeptLeadOrAbove,
 } from "@/lib/auth-guards";
 import {
   safeAmount,
@@ -18,7 +18,7 @@ import {
 } from "@/lib/input-limits";
 
 export async function createProjectAction(formData: FormData) {
-  const user = await requireManagerOrAdmin();
+  const user = await requireDeptLeadOrAbove();
 
   let title: string | null;
   let clientName: string | null;
@@ -118,7 +118,7 @@ export async function createProjectAction(formData: FormData) {
 }
 
 export async function updateProjectAction(id: string, formData: FormData) {
-  await requireManagerOrAdmin();
+  await requireDeptLeadOrAbove();
 
   let title: string | null;
   let description: string | null | undefined;
@@ -188,7 +188,7 @@ export async function updateProjectAction(id: string, formData: FormData) {
 }
 
 export async function deleteProjectAction(id: string) {
-  await requireManagerOrAdmin();
+  await requireDeptLeadOrAbove();
   const before = await prisma.project.findUnique({ where: { id } });
   await prisma.project.delete({ where: { id } });
   if (before) {
@@ -203,7 +203,7 @@ export async function deleteProjectAction(id: string) {
 }
 
 export async function addMemberAction(projectId: string, userId: string, role?: string) {
-  await requireManagerOrAdmin();
+  await requireDeptLeadOrAbove();
   await prisma.projectMember.upsert({
     where: { projectId_userId: { projectId, userId } },
     create: { projectId, userId, role: role ?? null },
@@ -214,7 +214,7 @@ export async function addMemberAction(projectId: string, userId: string, role?: 
 }
 
 export async function removeMemberAction(projectId: string, userId: string) {
-  await requireManagerOrAdmin();
+  await requireDeptLeadOrAbove();
   await prisma.projectMember.delete({
     where: { projectId_userId: { projectId, userId } },
   });

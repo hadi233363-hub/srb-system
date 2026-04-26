@@ -49,10 +49,12 @@ export async function listUsersWithBadges(options?: {
   });
 }
 
+import type { Role } from "@/lib/auth/roles";
+
 export async function createUser(input: {
   email: string;
   name: string;
-  role: "admin" | "manager" | "employee";
+  role: Role;
   department?: string | null;
   jobTitle?: string | null;
   phone?: string | null;

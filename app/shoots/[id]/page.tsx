@@ -22,6 +22,7 @@ import { getLocale } from "@/lib/i18n/server";
 import { translate } from "@/lib/i18n/dict";
 import { cn } from "@/lib/cn";
 import { ShootActions } from "../shoot-actions";
+import { isDeptLeadOrAbove } from "@/lib/auth/roles";
 
 const STATUS_STYLE: Record<string, string> = {
   scheduled: "bg-sky-500/10 text-sky-400 border-sky-500/30",
@@ -58,7 +59,7 @@ export default async function ShootDetailPage(props: {
   const t = (key: string) => translate(key, locale);
   const user = session?.user;
   if (!user) return null;
-  const canManage = user.role === "admin" || user.role === "manager";
+  const canManage = isDeptLeadOrAbove(user.role);
 
   const shoot = await prisma.photoShoot.findUnique({
     where: { id },

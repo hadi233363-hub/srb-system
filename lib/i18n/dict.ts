@@ -21,9 +21,12 @@ export const DICT: Record<string, { ar: string; en: string }> = {
   "nav.reports": { ar: "التقارير", en: "Reports" },
   "nav.admin_users": { ar: "إدارة الحسابات", en: "User management" },
 
-  // Roles
-  "role.admin": { ar: "مدير", en: "Admin" },
-  "role.manager": { ar: "رئيس قسم", en: "Manager" },
+  // Roles — labels reflect the 4-tier hierarchy: الرئيس (admin/owner) →
+  // المدير (manager) → رئيس قسم (department_lead) → موظف (employee).
+  // The DB role value `admin` represents the owner / president tier.
+  "role.admin": { ar: "الرئيس", en: "President" },
+  "role.manager": { ar: "المدير", en: "Manager" },
+  "role.department_lead": { ar: "رئيس قسم", en: "Department Head" },
   "role.employee": { ar: "موظف", en: "Employee" },
 
   // Auth
@@ -1088,9 +1091,26 @@ export const DICT: Record<string, { ar: string; en: string }> = {
   "admin.users.youLabel": { ar: "أنت", en: "You" },
   "admin.users.addedToast": { ar: "تم الإضافة", en: "Added" },
   "admin.users.addFailed": { ar: "فشل الإضافة", en: "Failed to add" },
-  "admin.users.roleOptAdmin": { ar: "مدير — يشوف كل شي", en: "Admin — sees everything" },
-  "admin.users.roleOptManager": { ar: "رئيس قسم — قسمه فقط", en: "Manager — their dept only" },
-  "admin.users.roleOptEmployee": { ar: "موظف — مهامه فقط", en: "Employee — own tasks only" },
+  "admin.users.roleOptAdmin": {
+    ar: "الرئيس — يشوف كل شي بما فيه المالية",
+    en: "President — sees everything incl. finance",
+  },
+  "admin.users.roleOptManager": {
+    ar: "المدير — يدير العمليات ويوافق على الموظفين",
+    en: "Manager — runs ops & approves employees",
+  },
+  "admin.users.roleOptDeptLead": {
+    ar: "رئيس قسم — يدير مشاريع ومصاريف قسمه",
+    en: "Dept Head — manages their dept projects & expenses",
+  },
+  "admin.users.roleOptEmployee": {
+    ar: "موظف — مهامه فقط",
+    en: "Employee — own tasks only",
+  },
+  "admin.users.lockedHigherRank": {
+    ar: "ما تقدر تعدّل على حساب بدرجتك أو فوق",
+    en: "Can't edit accounts at or above your rank",
+  },
   "action.adding": { ar: "يضيف...", en: "Adding..." },
 
   // Login page
@@ -1141,6 +1161,44 @@ export const DICT: Record<string, { ar: string; en: string }> = {
   "invoice.widget.empty": {
     ar: "ما فيه مشاريع شهرية بعد",
     en: "No monthly projects yet",
+  },
+
+  // Finance — locked tier (employees / non-recorders)
+  "finance.locked.desc": {
+    ar: "صفحة المالية مقيّدة على رئيس قسم وفوق",
+    en: "Finance is restricted to dept head and above",
+  },
+  "finance.locked.body": {
+    ar: "كلّم المدير لو محتاج تسجّل أي حركة مالية",
+    en: "Talk to a manager if you need to record a transaction",
+  },
+
+  // Task deadline reminders (in-app + desktop notifications)
+  "tasks.reminder.dueSoon": { ar: "موعد التسليم قرّب", en: "Task due soon" },
+  "tasks.reminder.overdue": { ar: "تجاوزت موعد التاسك", en: "Task overdue" },
+  "tasks.reminder.in": { ar: "بعد", en: "in" },
+  "tasks.reminder.lateBy": { ar: "متأخرة بـ", en: "late by" },
+  "tasks.reminder.minutes": { ar: "دقيقة", en: "min" },
+  "tasks.reminder.deliveryStillOk": {
+    ar: "موعد التسليم للعميل لسا في وقت",
+    en: "Client delivery date still has slack",
+  },
+
+  // Notification bell + inbox
+  "notifications.title": { ar: "الإشعارات", en: "Notifications" },
+  "notifications.empty": { ar: "ما فيه إشعارات بعد", en: "No notifications yet" },
+  "notifications.allRead": { ar: "الكل مقروء", en: "All read" },
+
+  // Smart Insights panel — home page
+  "insights.heading": { ar: "تنبيهات ذكية", en: "Smart insights" },
+  "insights.subheading": {
+    ar: "النظام يراقب 24/7 ويرفع لك أي شي يحتاج قرار",
+    en: "Live monitoring — surfaces anything that needs your call",
+  },
+  "insights.allClear.title": { ar: "كل شي تمام", en: "All clear" },
+  "insights.allClear.desc": {
+    ar: "ما فيه تنبيهات اللحين — استمر",
+    en: "Nothing flagged right now — keep going",
   },
 
   // Misc

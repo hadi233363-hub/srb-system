@@ -5,7 +5,7 @@ import { prisma } from "@/lib/db/prisma";
 import { logAudit } from "@/lib/db/audit";
 import {
   requireActiveUser as requireAuth,
-  requireManagerOrAdmin,
+  requireDeptLeadOrAbove,
 } from "@/lib/auth-guards";
 
 function parseDateTime(raw: string | null): Date | null {
@@ -15,7 +15,7 @@ function parseDateTime(raw: string | null): Date | null {
 }
 
 export async function createMeetingAction(formData: FormData) {
-  const user = await requireManagerOrAdmin();
+  const user = await requireDeptLeadOrAbove();
 
   const clientName = (formData.get("clientName") as string | null)?.trim();
   const companyName = (formData.get("companyName") as string | null)?.trim() || null;
@@ -76,7 +76,7 @@ export async function createMeetingAction(formData: FormData) {
 }
 
 export async function updateMeetingAction(id: string, formData: FormData) {
-  await requireManagerOrAdmin();
+  await requireDeptLeadOrAbove();
 
   const data: Record<string, unknown> = {};
   const fields = [
@@ -129,7 +129,7 @@ export async function updateMeetingAction(id: string, formData: FormData) {
 }
 
 export async function deleteMeetingAction(id: string) {
-  await requireManagerOrAdmin();
+  await requireDeptLeadOrAbove();
   const before = await prisma.clientMeeting.findUnique({ where: { id } });
   await prisma.clientMeeting.delete({ where: { id } });
   if (before) {

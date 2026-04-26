@@ -15,6 +15,12 @@ import { cn } from "@/lib/cn";
 import { getLocale } from "@/lib/i18n/server";
 import { translate, type Locale } from "@/lib/i18n/dict";
 import { BackupHealthWidget } from "@/components/backup-health-widget";
+import { SmartInsightsPanel } from "@/components/smart-insights";
+import {
+  isDeptLeadOrAbove,
+  isManagerOrAbove,
+  isOwner,
+} from "@/lib/auth/roles";
 
 const MS_30D = 30 * 24 * 60 * 60 * 1000;
 
@@ -22,7 +28,11 @@ export default async function OverviewPage() {
   const [session, locale] = await Promise.all([auth(), getLocale()]);
   const t = (key: string) => translate(key, locale);
   const userName = session?.user?.name ?? t("overview.userFallback");
-  const isAdmin = session?.user.role === "admin";
+  const role = session?.user.role;
+  // Money KPIs are owner-only — manager/dept_lead/employee never see them.
+  const isAdmin = isOwner(role);
+  const canManageUsers = isManagerOrAbove(role);
+  const canRecordTx = isDeptLeadOrAbove(role);
 
   const now = new Date();
   const thirtyAgo = new Date(now.getTime() - MS_30D);
@@ -131,6 +141,11 @@ export default async function OverviewPage() {
         )}
       </div>
 
+      {/* Smart Insights — visible to everyone but the content is role-aware
+          (financial signals only show for owner). Computed server-side from
+          live DB scans. */}
+      <SmartInsightsPanel userRole={role} locale={locale} />
+
       {isAdmin && <BackupHealthWidget locale={locale} />}
 
       {isEmpty && (
@@ -180,12 +195,14 @@ export default async function OverviewPage() {
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <QuickAction href="/projects" icon={Plus} label={t("action.newProject")} />
           <QuickAction href="/tasks" icon={Plus} label={t("action.newTask")} />
-          <QuickAction
-            href="/finance"
-            icon={DollarSign}
-            label={t("action.recordTransaction")}
-          />
-          {isAdmin && (
+          {canRecordTx && (
+            <QuickAction
+              href="/finance"
+              icon={DollarSign}
+              label={t("action.recordTransaction")}
+            />
+          )}
+          {canManageUsers && (
             <QuickAction
               href="/admin/users"
               icon={Users}

@@ -1,10 +1,11 @@
 import type { DefaultSession } from "next-auth";
+import type { Role } from "@/lib/auth/roles";
 
 declare module "next-auth" {
   interface Session {
     user: {
       id: string;
-      role: "admin" | "manager" | "employee";
+      role: Role;
       department: string | null;
       active: boolean;
       approved: boolean; // approvedAt is not null
@@ -15,7 +16,7 @@ declare module "next-auth" {
 declare module "next-auth/jwt" {
   interface JWT {
     userId?: string;
-    role?: "admin" | "manager" | "employee";
+    role?: Role;
     department?: string | null;
     active?: boolean;
     approved?: boolean;

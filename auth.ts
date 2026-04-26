@@ -12,6 +12,7 @@ import NextAuth from "next-auth";
 import authConfig from "./auth.config";
 import { prisma } from "@/lib/db/prisma";
 import { findUserByEmail, touchLogin } from "@/lib/db/users";
+import type { Role } from "@/lib/auth/roles";
 
 export const { auth, handlers, signIn, signOut } = NextAuth({
   ...authConfig,
@@ -58,7 +59,7 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
         const user = await findUserByEmail(token.email);
         if (user) {
           token.userId = user.id;
-          token.role = user.role as "admin" | "manager" | "employee";
+          token.role = user.role as Role;
           token.department = user.department;
           token.name = user.name;
           token.active = user.active;
@@ -70,8 +71,7 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
     async session({ session, token }) {
       if (session.user && token.userId) {
         session.user.id = token.userId as string;
-        session.user.role =
-          (token.role as "admin" | "manager" | "employee") ?? "employee";
+        session.user.role = (token.role as Role) ?? "employee";
         session.user.department = (token.department as string | null) ?? null;
         session.user.active = (token.active as boolean | undefined) ?? false;
         session.user.approved = (token.approved as boolean | undefined) ?? false;

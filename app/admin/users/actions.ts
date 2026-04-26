@@ -9,38 +9,61 @@ import {
 } from "@/lib/db/users";
 import { prisma } from "@/lib/db/prisma";
 import { logAudit } from "@/lib/db/audit";
-import { requireAdmin as requireAdminUser } from "@/lib/auth-guards";
-
-type Role = "admin" | "manager" | "employee";
-
-async function requireAdmin() {
-  const user = await requireAdminUser();
-  return { user };
-}
+import {
+  requireManagerOrAbove,
+  requireOwner,
+} from "@/lib/auth-guards";
+import {
+  canAssignRole,
+  isOwner,
+  isValidRole,
+  type Role,
+} from "@/lib/auth/roles";
 
 function userLabel(u: { name: string; email: string }) {
   return `${u.name} · ${u.email}`;
 }
 
+// All approval / role-assignment actions are open to MANAGER+. The owner
+// (الرئيس) can grant any role; managers can grant only department_lead and
+// employee. We always validate the requested role against the actor's
+// `assignableRoles` so a manager can't bypass the UI to promote someone to
+// admin or another manager.
+async function requireRoleAssigner(targetRole: Role) {
+  const actor = await requireManagerOrAbove();
+  if (!canAssignRole(actor.role, targetRole)) {
+    throw new Error("ما تقدر تعطي هذي الصلاحية — أعلى من مستواك");
+  }
+  return actor;
+}
+
 export async function addUserAction(formData: FormData) {
-  await requireAdmin();
   const email = (formData.get("email") as string | null)?.trim().toLowerCase();
   const name = (formData.get("name") as string | null)?.trim();
-  const role = formData.get("role") as Role | null;
+  const roleRaw = formData.get("role");
   const department =
     (formData.get("department") as string | null)?.trim() || null;
 
-  if (!email || !name || !role) {
+  if (!email || !name || !roleRaw) {
     return { ok: false, message: "كل الخانات مطلوبة" };
   }
-  if (!["admin", "manager", "employee"].includes(role)) {
+  if (!isValidRole(roleRaw)) {
     return { ok: false, message: "الدور غير صحيح" };
   }
+  const role = roleRaw;
+
+  let actor;
+  try {
+    actor = await requireRoleAssigner(role);
+  } catch (e) {
+    return { ok: false, message: e instanceof Error ? e.message : "غير مسموح" };
+  }
+
   if (await findUserByEmail(email)) {
     return { ok: false, message: "الإيميل موجود مسبقاً" };
   }
 
-  // Admin-created users are approved immediately.
+  // Manager-or-above-created users are approved immediately.
   const user = await createUser({ email, name, role, department });
   await prisma.user.update({
     where: { id: user.id },
@@ -49,55 +72,91 @@ export async function addUserAction(formData: FormData) {
   await logAudit({
     action: "user.create",
     target: { type: "user", id: user.id, label: userLabel(user) },
-    metadata: { role, department },
+    metadata: { role, department, byRole: actor.role },
   });
   revalidatePath("/admin/users");
   return { ok: true, message: `تم إضافة ${name}` };
 }
 
 export async function toggleUserActiveAction(id: string, active: boolean) {
-  await requireAdmin();
+  const actor = await requireManagerOrAbove();
   const before = await prisma.user.findUnique({ where: { id } });
-  await updateUser(id, { active });
-  if (before) {
-    await logAudit({
-      action: active ? "user.activate" : "user.deactivate",
-      target: { type: "user", id, label: userLabel(before) },
-    });
+  if (!before) return { ok: false, message: "الحساب غير موجود" };
+
+  // Guard: a manager cannot deactivate / reactivate someone above their tier
+  // (e.g. another manager or the owner). Only the owner can touch managers
+  // and other owners.
+  if (!isOwner(actor.role) && (before.role === "admin" || before.role === "manager")) {
+    return { ok: false, message: "ما تقدر تعدّل على حساب بدرجتك أو فوق" };
   }
+
+  await updateUser(id, { active });
+  await logAudit({
+    action: active ? "user.activate" : "user.deactivate",
+    target: { type: "user", id, label: userLabel(before) },
+    metadata: { byRole: actor.role },
+  });
   revalidatePath("/admin/users");
   return { ok: true };
 }
 
 export async function changeUserRoleAction(id: string, role: Role) {
-  await requireAdmin();
-  const before = await prisma.user.findUnique({ where: { id } });
-  await updateUser(id, { role });
-  if (before) {
-    await logAudit({
-      action: "user.role_change",
-      target: { type: "user", id, label: userLabel(before) },
-      metadata: { from: before.role, to: role },
-    });
+  if (!isValidRole(role)) {
+    return { ok: false, message: "الدور غير صحيح" };
   }
+  let actor;
+  try {
+    actor = await requireRoleAssigner(role);
+  } catch (e) {
+    return { ok: false, message: e instanceof Error ? e.message : "غير مسموح" };
+  }
+
+  const before = await prisma.user.findUnique({ where: { id } });
+  if (!before) return { ok: false, message: "الحساب غير موجود" };
+
+  // Don't let a manager DEMOTE someone above their tier either — only the
+  // owner can change manager / admin roles.
+  if (
+    !isOwner(actor.role) &&
+    (before.role === "admin" || before.role === "manager")
+  ) {
+    return { ok: false, message: "ما تقدر تغيّر دور حساب بدرجتك أو فوق" };
+  }
+
+  await updateUser(id, { role });
+  await logAudit({
+    action: "user.role_change",
+    target: { type: "user", id, label: userLabel(before) },
+    metadata: { from: before.role, to: role, byRole: actor.role },
+  });
   revalidatePath("/admin/users");
   return { ok: true };
 }
 
 export async function deleteUserAction(id: string) {
-  const session = await requireAdmin();
-  if (session.user.id === id) {
+  const actor = await requireManagerOrAbove();
+  if (actor.id === id) {
     return { ok: false, message: "ما تقدر تحذف حسابك" };
   }
   const before = await prisma.user.findUnique({ where: { id } });
-  await deleteUser(id);
-  if (before) {
-    await logAudit({
-      action: "user.delete",
-      target: { type: "user", id, label: userLabel(before) },
-      metadata: { role: before.role, department: before.department },
-    });
+  if (!before) return { ok: false, message: "الحساب غير موجود" };
+
+  // Same protection as toggle / role change — only owner can remove a manager
+  // or another owner.
+  if (!isOwner(actor.role) && (before.role === "admin" || before.role === "manager")) {
+    return { ok: false, message: "ما تقدر تحذف حساب بدرجتك أو فوق" };
   }
+
+  await deleteUser(id);
+  await logAudit({
+    action: "user.delete",
+    target: { type: "user", id, label: userLabel(before) },
+    metadata: {
+      role: before.role,
+      department: before.department,
+      byRole: actor.role,
+    },
+  });
   revalidatePath("/admin/users");
   return { ok: true };
 }
@@ -108,10 +167,16 @@ export async function approveUserAction(
   role: Role,
   department: string | null
 ) {
-  await requireAdmin();
-  if (!["admin", "manager", "employee"].includes(role)) {
+  if (!isValidRole(role)) {
     return { ok: false, message: "الدور غير صحيح" };
   }
+  let actor;
+  try {
+    actor = await requireRoleAssigner(role);
+  } catch (e) {
+    return { ok: false, message: e instanceof Error ? e.message : "غير مسموح" };
+  }
+
   const updated = await prisma.user.update({
     where: { id },
     data: {
@@ -121,10 +186,26 @@ export async function approveUserAction(
       department: department?.trim() || null,
     },
   });
+
+  // Drop a notification in the user's inbox so they know the moment they next
+  // open the app — separate from any email Auth.js may send.
+  await prisma.notification
+    .create({
+      data: {
+        recipientId: id,
+        kind: "user.approved",
+        severity: "success",
+        title: "تم تفعيل حسابك",
+        body: `صلاحياتك: ${role}${department ? ` · ${department}` : ""}`,
+        linkUrl: "/",
+      },
+    })
+    .catch(() => {});
+
   await logAudit({
     action: "user.approve",
     target: { type: "user", id, label: userLabel(updated) },
-    metadata: { role, department: department?.trim() || null },
+    metadata: { role, department: department?.trim() || null, byRole: actor.role },
   });
   revalidatePath("/admin/users");
   return { ok: true };
@@ -135,7 +216,7 @@ export async function approveUserAction(
  * Returns { ok, attached } where `attached` reflects the new state.
  */
 export async function toggleUserBadgeAction(userId: string, badgeId: string) {
-  const session = await requireAdmin();
+  const actor = await requireManagerOrAbove();
 
   const [user, badge, existing] = await Promise.all([
     prisma.user.findUnique({ where: { id: userId } }),
@@ -166,7 +247,7 @@ export async function toggleUserBadgeAction(userId: string, badgeId: string) {
     data: {
       userId,
       badgeId,
-      assignedById: session.user.id,
+      assignedById: actor.id,
     },
   });
   await logAudit({
@@ -180,10 +261,11 @@ export async function toggleUserBadgeAction(userId: string, badgeId: string) {
 }
 
 // Reject a pending sign-up: deletes the row entirely. They can sign in again later
-// which would re-queue them as pending.
+// which would re-queue them as pending. Owner-only — managers can approve but
+// cannot hard-delete a record.
 export async function rejectUserAction(id: string) {
-  const session = await requireAdmin();
-  if (session.user.id === id) {
+  const actor = await requireOwner();
+  if (actor.id === id) {
     return { ok: false, message: "ما تقدر تحذف حسابك" };
   }
   const before = await prisma.user.findUnique({ where: { id } });

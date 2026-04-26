@@ -22,6 +22,7 @@ import { DeleteTransactionButton } from "./delete-transaction-button";
 import { PeriodSelector } from "./period-selector";
 import { getLocale } from "@/lib/i18n/server";
 import { translate, type Locale } from "@/lib/i18n/dict";
+import { isDeptLeadOrAbove, isOwner } from "@/lib/auth/roles";
 
 const VALID_PERIODS: Period[] = ["week", "month", "quarter", "year"];
 
@@ -30,16 +31,39 @@ export default async function FinancePage(props: {
 }) {
   const [session, locale] = await Promise.all([auth(), getLocale()]);
   const t = (key: string) => translate(key, locale);
-  const isAdmin = session?.user.role === "admin";
+  // Only the OWNER (الرئيس) sees totals, baseline, P&L and the full
+  // transactions table. Manager + dept_lead can still RECORD transactions
+  // (income / expense / salary) — they get the simplified entry view below.
+  // Plain employees don't see the page at all.
+  const role = session?.user.role;
+  const isFinanceOwner = isOwner(role);
+  const canRecord = isDeptLeadOrAbove(role);
+
+  if (!canRecord) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold">{t("finance.employee.title")}</h1>
+          <p className="mt-1 text-sm text-zinc-500">
+            {t("finance.locked.desc")}
+          </p>
+        </div>
+        <div className="rounded-xl border border-dashed border-zinc-800 bg-zinc-900/30 p-8 text-center text-sm text-zinc-500">
+          {t("finance.locked.body")}
+        </div>
+      </div>
+    );
+  }
 
   const { period: periodRaw } = await props.searchParams;
   const period: Period = VALID_PERIODS.includes(periodRaw as Period)
     ? (periodRaw as Period)
     : "month";
 
-  // Non-admins only need the list of active projects to tag their transactions.
-  // We skip all the heavy aggregation queries for them.
-  if (!isAdmin) {
+  // Manager / dept_lead get the entry-only view: list of active projects to tag
+  // their transactions, plus the "new transaction" button. We skip every
+  // aggregation query so they never see totals leak through.
+  if (!isFinanceOwner) {
     const activeProjectsForDropdown = await prisma.project.findMany({
       where: { status: { in: ["active", "on_hold"] } },
       select: { id: true, title: true },

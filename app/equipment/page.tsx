@@ -17,6 +17,7 @@ import { formatDate, formatQar } from "@/lib/db/helpers";
 import { EquipmentForm } from "./equipment-form";
 import { CheckOutButton } from "./checkout-button";
 import { DeleteEquipmentButton } from "./delete-button";
+import { isDeptLeadOrAbove, isOwner } from "@/lib/auth/roles";
 
 // Map category → icon. Lucide 1.x doesn't ship every icon — pick ones we know exist.
 const CATEGORY_ICON: Record<string, typeof Camera> = {
@@ -45,7 +46,10 @@ export default async function EquipmentPage() {
   const t = (key: string) => translate(key, locale);
   const user = session?.user;
   if (!user) return null;
-  const canManage = user.role === "admin" || user.role === "manager";
+  const canManage = isDeptLeadOrAbove(user.role);
+  // Equipment value totals (purchase price aggregate) are owner-only — same
+  // policy as the finance dashboard.
+  const canSeeValue = isOwner(user.role);
 
   const [equipment, users] = await Promise.all([
     prisma.equipment.findMany({
@@ -119,8 +123,8 @@ export default async function EquipmentPage() {
         />
       </div>
 
-      {/* Total value (admin only — same sensitivity as salaries) */}
-      {user.role === "admin" && totalValue > 0 && (
+      {/* Total value (owner only — same sensitivity as salaries) */}
+      {canSeeValue && totalValue > 0 && (
         <div
           className="rounded-xl border p-4"
           style={{

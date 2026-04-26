@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db/prisma";
 import { logAudit } from "@/lib/db/audit";
 import { requireActiveUser as requireAuth } from "@/lib/auth-guards";
+import { isDeptLeadOrAbove } from "@/lib/auth/roles";
+import { createNotification } from "@/lib/db/notifications";
 import {
   safeString,
   MAX_LONG_TEXT,
@@ -56,6 +58,21 @@ export async function createTaskAction(formData: FormData) {
       toValue: status,
     },
   });
+
+  // Drop a notification in the assignee's inbox so they know the moment a task
+  // is dropped on them. Skip if they assigned it to themselves.
+  if (assigneeId && assigneeId !== user.id) {
+    await createNotification({
+      recipientId: assigneeId,
+      kind: "task.assigned",
+      severity: "info",
+      title: `مهمة جديدة: ${title}`,
+      body: dueAt ? `الموعد: ${dueAt.toLocaleString("ar")}` : null,
+      linkUrl: "/tasks",
+      refType: "task",
+      refId: task.id,
+    }).catch(() => null);
+  }
 
   await logAudit({
     action: "task.create",
@@ -132,6 +149,16 @@ export async function updateTaskAction(id: string, formData: FormData) {
   const nowDone = status === "done";
   const estHours = estimatedHoursRaw ? parseFloat(estimatedHoursRaw) : undefined;
 
+  // If dueAt was rescheduled FORWARD (later than the previous value), reset
+  // the reminder flags so a fresh "due-soon" alert can fire for the new
+  // window. We only reset on forward moves so backward moves don't accidentally
+  // re-trigger an alert that was already sent.
+  const newDueAt = dueAtRaw === null ? undefined : dueAtRaw ? new Date(dueAtRaw) : null;
+  const dueMovedForward =
+    newDueAt !== undefined &&
+    newDueAt !== null &&
+    (!task.dueAt || newDueAt.getTime() > task.dueAt.getTime());
+
   await prisma.task.update({
     where: { id },
     data: {
@@ -145,10 +172,31 @@ export async function updateTaskAction(id: string, formData: FormData) {
       ...(dueAtRaw !== null
         ? { dueAt: dueAtRaw ? new Date(dueAtRaw) : null }
         : {}),
+      ...(dueMovedForward
+        ? { reminderBeforeSentAt: null, reminderOverdueSentAt: null }
+        : {}),
       ...(nowDone && !wasDone ? { completedAt: new Date() } : {}),
       ...(!nowDone && wasDone ? { completedAt: null } : {}),
     },
   });
+
+  // Notify the new assignee if it changed and isn't the same actor.
+  if (
+    assigneeId !== null &&
+    assigneeId &&
+    assigneeId !== task.assigneeId &&
+    assigneeId !== user.id
+  ) {
+    await createNotification({
+      recipientId: assigneeId,
+      kind: "task.assigned",
+      severity: "info",
+      title: `صار عندك مهمة: ${title ?? task.title}`,
+      linkUrl: "/tasks",
+      refType: "task",
+      refId: id,
+    }).catch(() => null);
+  }
 
   // Replace collaborators list if provided.
   if (collaboratorIds !== null) {
@@ -199,20 +247,105 @@ export async function updateTaskAction(id: string, formData: FormData) {
 }
 
 export async function deleteTaskAction(id: string) {
-  await requireAuth();
+  // Tighter than before: only the creator, the assignee, or a dept_lead+ can
+  // delete a task. Stops random employees from wiping a teammate's work.
+  const user = await requireAuth();
   const task = await prisma.task.findUnique({ where: { id } });
-  await prisma.task.delete({ where: { id } });
-  if (task) {
-    await logAudit({
-      action: "task.delete",
-      target: { type: "task", id, label: task.title },
-      metadata: { projectId: task.projectId, status: task.status },
-    });
+  if (!task) return { ok: false, message: "المهمة غير موجودة" };
+
+  const isCreator = task.creatorId === user.id;
+  const isAssignee = task.assigneeId === user.id;
+  if (!isCreator && !isAssignee && !isDeptLeadOrAbove(user.role)) {
+    return { ok: false, message: "ما تقدر تحذف مهمة موب لك" };
   }
+
+  await prisma.task.delete({ where: { id } });
+  await logAudit({
+    action: "task.delete",
+    target: { type: "task", id, label: task.title },
+    metadata: { projectId: task.projectId, status: task.status },
+  });
   revalidatePath("/tasks");
-  if (task?.projectId) revalidatePath(`/projects/${task.projectId}`);
+  if (task.projectId) revalidatePath(`/projects/${task.projectId}`);
   return { ok: true };
 }
+
+// Server-side flag setters for the in-app reminder poller. Each one stamps
+// the corresponding `reminderXxxSentAt` so the next /api/tasks/upcoming poll
+// won't return the same task again. We also drop a Notification row in the
+// recipient's inbox so they have a record they can review later from any
+// device — even if their browser missed the desktop notification.
+
+export async function markTaskBeforeReminderSentAction(id: string) {
+  const user = await requireAuth();
+  const task = await prisma.task.findUnique({
+    where: { id },
+    include: { project: { select: { title: true } } },
+  });
+  if (!task) return { ok: false };
+
+  // Only the assignee or a collaborator may mark — prevents an outsider from
+  // silencing somebody else's reminder.
+  const collab = await prisma.taskCollaborator.findUnique({
+    where: { taskId_userId: { taskId: id, userId: user.id } },
+  });
+  if (task.assigneeId !== user.id && !collab) return { ok: false };
+
+  await prisma.task.updateMany({
+    where: { id, reminderBeforeSentAt: null },
+    data: { reminderBeforeSentAt: new Date() },
+  });
+
+  await createNotification({
+    recipientId: user.id,
+    kind: "task.due_soon",
+    severity: "warning",
+    title: `قرّب موعد المهمة: ${task.title}`,
+    body: task.dueAt ? `الموعد: ${task.dueAt.toLocaleString("ar")}` : null,
+    linkUrl: "/tasks",
+    refType: "task",
+    refId: id,
+    dedupeKey: { kind: "task.due_soon", refType: "task", refId: id },
+  }).catch(() => null);
+
+  return { ok: true };
+}
+
+export async function markTaskOverdueReminderSentAction(id: string) {
+  const user = await requireAuth();
+  const task = await prisma.task.findUnique({
+    where: { id },
+    include: { project: { select: { title: true, deadlineAt: true } } },
+  });
+  if (!task) return { ok: false };
+
+  const collab = await prisma.taskCollaborator.findUnique({
+    where: { taskId_userId: { taskId: id, userId: user.id } },
+  });
+  if (task.assigneeId !== user.id && !collab) return { ok: false };
+
+  await prisma.task.updateMany({
+    where: { id, reminderOverdueSentAt: null },
+    data: { reminderOverdueSentAt: new Date() },
+  });
+
+  await createNotification({
+    recipientId: user.id,
+    kind: "task.overdue",
+    severity: "danger",
+    title: `تأخّرت المهمة: ${task.title}`,
+    body: task.project?.deadlineAt
+      ? `لكن موعد التسليم للعميل: ${task.project.deadlineAt.toLocaleString("ar")} — لسا في وقت`
+      : "تجاوزت موعدها — حدّثها",
+    linkUrl: "/tasks",
+    refType: "task",
+    refId: id,
+    dedupeKey: { kind: "task.overdue", refType: "task", refId: id },
+  }).catch(() => null);
+
+  return { ok: true };
+}
+
 
 export async function addCommentAction(taskId: string, content: string) {
   const user = await requireAuth();

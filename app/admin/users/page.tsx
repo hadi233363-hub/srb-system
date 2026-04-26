@@ -5,13 +5,14 @@ import { prisma } from "@/lib/db/prisma";
 import { UsersAdminClient } from "./users-admin-client";
 import { getLocale } from "@/lib/i18n/server";
 import { translate } from "@/lib/i18n/dict";
+import { assignableRoles, isManagerOrAbove } from "@/lib/auth/roles";
 
 export default async function AdminUsersPage() {
   const [session, locale] = await Promise.all([auth(), getLocale()]);
   const t = (key: string) => translate(key, locale);
 
   if (!session?.user) redirect("/login");
-  if (session.user.role !== "admin") {
+  if (!isManagerOrAbove(session.user.role)) {
     return (
       <div className="flex min-h-[50vh] items-center justify-center">
         <div className="rounded-xl border border-rose-900/40 bg-rose-950/20 p-6 text-center">
@@ -38,6 +39,8 @@ export default async function AdminUsersPage() {
       <UsersAdminClient
         users={users}
         currentUserId={session.user.id}
+        currentUserRole={session.user.role}
+        allowedRoles={assignableRoles(session.user.role)}
         allBadges={allBadges}
         locale={locale}
       />
