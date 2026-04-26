@@ -26,6 +26,15 @@ export interface TaskDetail {
   assignee: { id: string; name: string } | null;
   collaborators?: { user: { id: string; name: string } }[];
   project: { id: string; title: string } | null;
+  // Submission snapshot (latest delivery on the task row)
+  submissionUrl?: string | null;
+  submissionFileUrl?: string | null;
+  submissionFileName?: string | null;
+  submissionFileType?: string | null;
+  submissionNote?: string | null;
+  submittedAt?: Date | string | null;
+  reviewNote?: string | null;
+  reviewedAt?: Date | string | null;
 }
 
 interface CurrentViewer {
@@ -345,13 +354,23 @@ export function TaskDetailModal({
             <div className="sm:col-span-2">
               <TaskSubmissionSection
                 taskId={task.id}
+                taskTitle={task.title}
                 taskStatus={task.status}
                 isAssignee={
                   task.assignee?.id === viewer.id ||
                   (task.collaborators?.some((c) => c.user.id === viewer.id) ?? false)
                 }
                 isOwner={viewer.isOwner}
+                submissionUrl={task.submissionUrl ?? null}
+                submissionFileUrl={task.submissionFileUrl ?? null}
+                submissionFileName={task.submissionFileName ?? null}
+                submissionFileType={task.submissionFileType ?? null}
+                submissionNote={task.submissionNote ?? null}
+                submittedAt={task.submittedAt ?? null}
+                reviewNote={task.reviewNote ?? null}
+                reviewedAt={task.reviewedAt ?? null}
                 submissions={submissions ?? []}
+                onAfterAction={onClose}
               />
             </div>
           )}
