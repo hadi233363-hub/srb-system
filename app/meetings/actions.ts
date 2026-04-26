@@ -66,6 +66,23 @@ export async function createMeetingAction(formData: FormData) {
     },
   });
 
+  // Confirmation push to the owner — they know it's saved + scheduled.
+  // The 1-hour-before reminder is fired separately by the server scheduler
+  // (lib/reminders/scheduler.ts) so it works even when the page is closed.
+  if (ownerId !== user.id) {
+    const { createNotification } = await import("@/lib/db/notifications");
+    await createNotification({
+      recipientId: ownerId,
+      kind: "meeting.assigned",
+      severity: "info",
+      title: `📅 اجتماع جديد عليك — ${clientName}`,
+      body: `${meetingAt.toLocaleString("ar")}${location ? ` · ${location}` : ""}`,
+      linkUrl: "/meetings",
+      refType: "meeting",
+      refId: meeting.id,
+    }).catch(() => null);
+  }
+
   await logAudit({
     action: "meeting.create",
     target: {
