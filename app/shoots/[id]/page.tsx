@@ -41,12 +41,51 @@ const CONDITION_STYLE: Record<string, string> = {
 
 /**
  * Turn a Google Maps URL into an embeddable iframe src.
- * We keep it simple: if it's a maps.google.com or maps.app.goo.gl link with a
- * place or `q=` param, we fall back to the generic "q=<encoded location>" embed.
- * Otherwise we just return null and the UI shows a button link.
+ *
+ * Strategy:
+ *   1. If the user pasted a maps.app.goo.gl short link OR a maps.google.com
+ *      URL with explicit lat/lng, we embed THAT — preserves the exact pin
+ *      they shared.
+ *   2. Otherwise we fall back to a search query of the text location, which
+ *      always works without a Google API key.
+ *
+ * `output=embed` is the public, key-less embed mode — same one Google's own
+ * "Share → Embed a map" dialog generates.
  */
 function buildMapEmbed(rawLocation: string, mapUrl: string | null): string {
-  // Use the text location as a search query — reliable across all Google links.
+  // 1. Pin-preserving path — explicit short link or coords URL.
+  if (mapUrl) {
+    try {
+      const u = new URL(mapUrl);
+      // Short link from the Google Maps mobile share sheet — can't be parsed
+      // for coords, but the embed iframe will follow the redirect and show
+      // the pinned location.
+      if (
+        u.hostname === "maps.app.goo.gl" ||
+        u.hostname === "goo.gl" ||
+        u.hostname === "g.co"
+      ) {
+        return `https://www.google.com/maps?q=${encodeURIComponent(mapUrl)}&output=embed`;
+      }
+      // Already an embed URL — pass through.
+      if (u.searchParams.get("output") === "embed") {
+        return mapUrl;
+      }
+      // Standard maps.google.com URL with q= or @lat,lng.
+      if (u.hostname.endsWith("google.com") && u.pathname.startsWith("/maps")) {
+        const q = u.searchParams.get("q");
+        if (q) return `https://www.google.com/maps?q=${encodeURIComponent(q)}&output=embed`;
+        const atMatch = u.pathname.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+        if (atMatch) {
+          return `https://www.google.com/maps?q=${atMatch[1]},${atMatch[2]}&output=embed`;
+        }
+      }
+    } catch {
+      // mapUrl wasn't a parseable URL — fall through to text search
+    }
+  }
+
+  // 2. Text-search fallback — always renders something useful.
   const q = encodeURIComponent(rawLocation);
   return `https://www.google.com/maps?q=${q}&output=embed`;
 }
