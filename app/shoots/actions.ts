@@ -67,9 +67,28 @@ export async function createShootAction(formData: FormData) {
     },
   });
 
+  // Notify each crew member that they've been assigned a shoot. Skip the
+  // creator since they obviously know. The 24h-before / 1h-before reminders
+  // fire later via the server scheduler.
+  if (crewIds.length > 0) {
+    const { createNotificationMany } = await import("@/lib/db/notifications");
+    const others = crewIds.filter((uid) => uid !== user.id);
+    if (others.length > 0) {
+      await createNotificationMany(others, {
+        kind: "shoot.assigned",
+        severity: "info",
+        title: `📸 تصوير جديد عليك — ${title}`,
+        body: `${shootDate.toLocaleString("ar")} · ${location}`,
+        linkUrl: "/shoots",
+        refType: "shoot",
+        refId: shoot.id,
+      });
+    }
+  }
+
   await logAudit({
-    action: "project.create",
-    target: { type: "project", id: shoot.id, label: `تصوير: ${title}` },
+    action: "shoot.create",
+    target: { type: "shoot", id: shoot.id, label: `تصوير: ${title}` },
     metadata: { shootDate: shootDate.toISOString(), crewCount: crewIds.length },
   });
 

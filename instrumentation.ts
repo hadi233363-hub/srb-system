@@ -27,4 +27,14 @@ export async function register() {
 
   const { startScheduler } = await import("./lib/db/backup-scheduler");
   startScheduler();
+
+  // Reminder scheduler — fires meeting / shoot / task / invoice alerts every
+  // minute regardless of whether anyone has the page open. This is the
+  // pipeline that delivers Web Push to phones.
+  try {
+    const { startReminderScheduler } = await import("./lib/reminders/scheduler");
+    startReminderScheduler();
+  } catch (err) {
+    console.error("[instrumentation] reminder scheduler failed to start:", err);
+  }
 }
