@@ -1248,6 +1248,96 @@ export const DICT: Record<string, { ar: string; en: string }> = {
   "time.today": { ar: "اليوم", en: "Today" },
   "time.yesterday": { ar: "أمس", en: "Yesterday" },
   "time.days": { ar: "{n} يوم", en: "{n} day(s)" },
+
+  // ---------------------------------------------------------------------------
+  // Task work delivery (Submit Work)
+  // ---------------------------------------------------------------------------
+  "submission.title": { ar: "تسليم الشغل", en: "Submit work" },
+  "submission.linkLabel": { ar: "رابط (اختياري)", en: "Link (optional)" },
+  "submission.fileLabel": { ar: "ملف / صورة (اختياري)", en: "File / image (optional)" },
+  "submission.fileHint": {
+    ar: "JPG · PNG · GIF · PDF — حد أقصى 10 ميجا",
+    en: "JPG · PNG · GIF · PDF — max 10 MB",
+  },
+  "submission.noteLabel": { ar: "ملاحظة (اختياري)", en: "Note (optional)" },
+  "submission.notePlaceholder": {
+    ar: "ملاحظات للمراجع — مختصرة",
+    en: "Short notes for the reviewer",
+  },
+  "submission.submit": { ar: "سلّم المهمة", en: "Submit task" },
+  "submission.send": { ar: "أرسل", en: "Send" },
+  "submission.empty": {
+    ar: "ما فيه تسليم بعد",
+    en: "No submissions yet",
+  },
+  "submission.tooLarge": {
+    ar: "حجم الملف أكبر من 10 ميجا",
+    en: "File larger than 10 MB",
+  },
+  "submission.assigneeWaiting": {
+    ar: "تسليمك تحت المراجعة — في انتظار الرئيس",
+    en: "Submitted — waiting for owner review",
+  },
+  "submission.awaitingReview": {
+    ar: "في انتظار مراجعتك",
+    en: "Awaiting your review",
+  },
+  "submission.approve": { ar: "موافقة", en: "Approve" },
+  "submission.requestChanges": { ar: "طلب تعديل", en: "Request changes" },
+  "submission.reasonPlaceholder": {
+    ar: "اكتب السبب — يوصل للموظف",
+    en: "Write the reason — sent to the employee",
+  },
+  "submission.reasonRequired": {
+    ar: "اكتب سبب طلب التعديل",
+    en: "Write a reason for the change request",
+  },
+  "submission.reviewNotes": { ar: "ملاحظات المراجعة", en: "Review notes" },
+  "submission.attachment": { ar: "مرفق", en: "Attachment" },
+  "submission.status.pending": { ar: "قيد المراجعة", en: "Pending review" },
+  "submission.status.approved": { ar: "معتمد", en: "Approved" },
+  "submission.status.changes_requested": {
+    ar: "طُلب تعديل",
+    en: "Changes requested",
+  },
+
+  // ---------------------------------------------------------------------------
+  // Project phases
+  // ---------------------------------------------------------------------------
+  "phases.title": { ar: "مراحل المشروع", en: "Project phases" },
+  "phases.empty": { ar: "ما فيه مراحل بعد", en: "No phases yet" },
+  "phases.addPhase": { ar: "أضف مرحلة", en: "Add phase" },
+  "phases.create": { ar: "إنشاء المرحلة", en: "Create phase" },
+  "phases.startFromTemplate": {
+    ar: "ابدأ من قالب جاهز",
+    en: "Start from a template",
+  },
+  "phases.template.none": { ar: "بدون مراحل", en: "No phases" },
+  "phases.field.name": { ar: "اسم المرحلة", en: "Phase name" },
+  "phases.field.description": { ar: "وصف (اختياري)", en: "Description (optional)" },
+  "phases.field.deadline": { ar: "موعد المرحلة", en: "Phase deadline" },
+  "phases.tasksEmpty": {
+    ar: "ما فيه مهام في المرحلة بعد",
+    en: "No tasks in this phase yet",
+  },
+  "phases.proof": { ar: "دليل التسليم", en: "Delivery proof" },
+  "phases.pendingReview": { ar: "في انتظار المراجعة", en: "Pending review" },
+  "phases.reviewMe": { ar: "لازم تراجع التسليم", en: "Review the submission" },
+  "phases.approve": { ar: "اعتماد المرحلة", en: "Approve phase" },
+  "phases.unlock": { ar: "فك القفل", en: "Unlock" },
+  "phases.confirmDelete": {
+    ar: "أكيد تبي تحذف المرحلة؟",
+    en: "Delete this phase?",
+  },
+  "phases.completeHeader": {
+    ar: "أنهِ المرحلة — أرفق دليل تسليم",
+    en: "Complete phase — attach delivery proof",
+  },
+  "phases.completeButton": { ar: "أنهِ المرحلة", en: "Complete phase" },
+  "phases.status.not_started": { ar: "لم تبدأ", en: "Not started" },
+  "phases.status.active": { ar: "جارية", en: "Active" },
+  "phases.status.completed": { ar: "مكتملة", en: "Completed" },
+  "phases.status.locked": { ar: "مقفولة", en: "Locked" },
 };
 
 /** Translate a key into a given locale. Falls back to English if key missing. */

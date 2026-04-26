@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { AlertCircle, Clock, User as UserIcon, Users } from "lucide-react";
 import { cn } from "@/lib/cn";
 import {
@@ -12,6 +12,7 @@ import {
 import { updateTaskStatusAction } from "@/app/tasks/actions";
 import { useLocale, useT } from "@/lib/i18n/client";
 import { TaskDetailModal, type TaskDetail, type UserLite, type ProjectLite } from "./task-detail-modal";
+import type { SubmissionLite } from "./task-submission-section";
 
 export interface KanbanTask extends TaskDetail {
   _count?: { comments: number };
@@ -19,19 +20,39 @@ export interface KanbanTask extends TaskDetail {
 
 const COLUMNS = ["todo", "in_progress", "in_review", "done"] as const;
 
+interface Viewer {
+  id: string;
+  isOwner: boolean;
+}
+
 interface Props {
   tasks: KanbanTask[];
   users: UserLite[];
   projects?: ProjectLite[];
   allowProjectChange?: boolean;
+  viewer?: Viewer;
 }
 
-export function KanbanBoard({ tasks, users, projects, allowProjectChange }: Props) {
+export function KanbanBoard({ tasks, users, projects, allowProjectChange, viewer }: Props) {
   const [, startTransition] = useTransition();
   const [dragging, setDragging] = useState<string | null>(null);
   const [openTask, setOpenTask] = useState<KanbanTask | null>(null);
+  const [submissions, setSubmissions] = useState<SubmissionLite[]>([]);
   const t = useT();
   const { locale } = useLocale();
+
+  const openTaskId = openTask?.id;
+  useEffect(() => {
+    if (!openTaskId) return;
+    const ctrl = new AbortController();
+    fetch(`/api/tasks/${openTaskId}/submissions`, { signal: ctrl.signal })
+      .then((r) => (r.ok ? r.json() : { items: [] }))
+      .then((data) => setSubmissions(data.items ?? []))
+      .catch(() => {
+        // Aborted or network failure — leave the list as-is.
+      });
+    return () => ctrl.abort();
+  }, [openTaskId]);
 
   const grouped: Record<string, KanbanTask[]> = {
     todo: [],
@@ -130,6 +151,8 @@ export function KanbanBoard({ tasks, users, projects, allowProjectChange }: Prop
           projects={projects}
           allowProjectChange={allowProjectChange}
           onClose={() => setOpenTask(null)}
+          viewer={viewer}
+          submissions={submissions}
         />
       )}
     </>

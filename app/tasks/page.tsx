@@ -4,10 +4,16 @@ import { NewTaskButton } from "@/components/tasks/new-task-button";
 import { KanbanSquare } from "lucide-react";
 import { getLocale } from "@/lib/i18n/server";
 import { translate } from "@/lib/i18n/dict";
+import { auth } from "@/auth";
+import { isOwner } from "@/lib/auth/roles";
 
 export default async function TasksPage() {
   const locale = await getLocale();
   const t = (key: string) => translate(key, locale);
+  const session = await auth();
+  const viewer = session?.user
+    ? { id: session.user.id, isOwner: isOwner(session.user.role) }
+    : undefined;
 
   const [tasks, users, projects, badges] = await Promise.all([
     prisma.task.findMany({
@@ -98,6 +104,7 @@ export default async function TasksPage() {
           users={users}
           projects={projects}
           allowProjectChange
+          viewer={viewer}
         />
       )}
     </div>

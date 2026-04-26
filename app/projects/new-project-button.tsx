@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { Plus, X } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { createProjectAction } from "./actions";
-import { useT } from "@/lib/i18n/client";
+import { useLocale, useT } from "@/lib/i18n/client";
+import { PHASE_TEMPLATES } from "@/lib/projects/phase-templates";
 
 interface User {
   id: string;
@@ -16,21 +17,27 @@ interface User {
 
 export function NewProjectButton({ users }: { users: User[] }) {
   const t = useT();
+  const { locale } = useLocale();
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [billingType, setBillingType] = useState<"one_time" | "monthly">("one_time");
+  const [templateKey, setTemplateKey] = useState<string>("");
   const formRef = useRef<HTMLFormElement>(null);
   const router = useRouter();
 
   const onSubmit = (formData: FormData) => {
     setError(null);
+    formData.set("locale", locale);
+    if (templateKey) formData.set("phaseTemplate", templateKey);
+    else formData.delete("phaseTemplate");
     startTransition(async () => {
       const res = await createProjectAction(formData);
       if (res.ok && res.id) {
         setOpen(false);
         formRef.current?.reset();
         setBillingType("one_time");
+        setTemplateKey("");
         router.push(`/projects/${res.id}`);
       } else {
         setError(res.message ?? t("common.errorGeneric"));
@@ -197,6 +204,50 @@ export function NewProjectButton({ users }: { users: User[] }) {
                   placeholder={t("projects.field.descPlaceholder")}
                   className="w-full resize-none rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 focus:border-emerald-500/50 focus:outline-none"
                 />
+              </Field>
+
+              <Field label={t("phases.startFromTemplate")} full>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  <button
+                    type="button"
+                    onClick={() => setTemplateKey("")}
+                    className={cn(
+                      "rounded-md border px-2 py-1.5 text-xs transition",
+                      templateKey === ""
+                        ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-300"
+                        : "border-zinc-700 bg-zinc-950 text-zinc-400 hover:border-emerald-500/30"
+                    )}
+                  >
+                    {t("phases.template.none")}
+                  </button>
+                  {PHASE_TEMPLATES.map((tpl) => (
+                    <button
+                      key={tpl.key}
+                      type="button"
+                      onClick={() => setTemplateKey(tpl.key)}
+                      className={cn(
+                        "rounded-md border px-2 py-1.5 text-xs transition",
+                        templateKey === tpl.key
+                          ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-300"
+                          : "border-zinc-700 bg-zinc-950 text-zinc-400 hover:border-emerald-500/30"
+                      )}
+                    >
+                      {locale === "en" ? tpl.labelEn : tpl.labelAr}
+                    </button>
+                  ))}
+                </div>
+                {templateKey && (
+                  <div className="mt-2 rounded-md border border-zinc-800 bg-zinc-950/50 p-2 text-[11px] text-zinc-500">
+                    <ul className="space-y-0.5">
+                      {(PHASE_TEMPLATES.find((x) => x.key === templateKey)?.phases ?? [])
+                        .map((p, i) => (
+                          <li key={i}>
+                            {i + 1}. {locale === "en" ? p.en : p.ar}
+                          </li>
+                        ))}
+                    </ul>
+                  </div>
+                )}
               </Field>
 
               <div className="flex items-center justify-end gap-2 sm:col-span-2">

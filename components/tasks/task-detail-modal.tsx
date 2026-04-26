@@ -7,6 +7,10 @@ import { cn } from "@/lib/cn";
 import { deleteTaskAction, updateTaskAction } from "@/app/tasks/actions";
 import { isOverdue } from "@/lib/db/helpers";
 import { useT } from "@/lib/i18n/client";
+import {
+  TaskSubmissionSection,
+  type SubmissionLite,
+} from "./task-submission-section";
 
 const TASK_STATUSES = ["todo", "in_progress", "in_review", "done", "blocked"] as const;
 const PRIORITIES = ["low", "normal", "high", "urgent"] as const;
@@ -22,6 +26,11 @@ export interface TaskDetail {
   assignee: { id: string; name: string } | null;
   collaborators?: { user: { id: string; name: string } }[];
   project: { id: string; title: string } | null;
+}
+
+interface CurrentViewer {
+  id: string;
+  isOwner: boolean;
 }
 
 export interface UserLite {
@@ -41,6 +50,8 @@ interface Props {
   projects?: ProjectLite[];
   allowProjectChange?: boolean;
   onClose: () => void;
+  viewer?: CurrentViewer;
+  submissions?: SubmissionLite[];
 }
 
 export function TaskDetailModal({
@@ -49,6 +60,8 @@ export function TaskDetailModal({
   projects,
   allowProjectChange,
   onClose,
+  viewer,
+  submissions,
 }: Props) {
   const router = useRouter();
   const t = useT();
@@ -327,6 +340,21 @@ export function TaskDetailModal({
               className="w-full resize-none rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 focus:border-emerald-500/50 focus:outline-none"
             />
           </Field>
+
+          {viewer && (
+            <div className="sm:col-span-2">
+              <TaskSubmissionSection
+                taskId={task.id}
+                taskStatus={task.status}
+                isAssignee={
+                  task.assignee?.id === viewer.id ||
+                  (task.collaborators?.some((c) => c.user.id === viewer.id) ?? false)
+                }
+                isOwner={viewer.isOwner}
+                submissions={submissions ?? []}
+              />
+            </div>
+          )}
 
           <div className="flex items-center justify-between pt-2 sm:col-span-2">
             <button
