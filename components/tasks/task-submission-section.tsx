@@ -124,9 +124,14 @@ export function TaskSubmissionSection({
   const isDone = taskStatus === "done";
   const wasRejected = !!reviewNote && taskStatus === "in_progress";
 
-  // The form is shown to the assignee whenever the task isn't currently
-  // under review or already done.
-  const showForm = isAssignee && !isInReview && !isDone;
+  // Anyone who can act on this task. The assignee + collaborators are the
+  // primary case; the owner (admin) can submit on behalf because they manage
+  // every project end-to-end and routinely test the flow.
+  const canSubmit = isAssignee || isOwner;
+
+  // The form is shown when the task isn't currently under review or already
+  // done AND the viewer is somebody who can submit work on it.
+  const showForm = canSubmit && !isInReview && !isDone;
   const showOwnerReview = isOwner && isInReview;
 
   // ----------------------------------------------------------------------
@@ -573,12 +578,13 @@ export function TaskSubmissionSection({
         </details>
       )}
 
-      {/* Empty state when nothing applies (e.g. employee viewing somebody
-          else's task that has no submission) */}
+      {/* Empty state — only when the viewer truly has nothing to do (e.g.
+          a teammate browsing someone else's task that has no submission). */}
       {!showForm &&
         !showOwnerReview &&
         !isInReview &&
         !isDone &&
+        !canSubmit &&
         !(submissionUrl || submissionFileUrl) && (
           <div className="rounded-md border border-dashed border-zinc-800 px-3 py-2 text-[11px] text-zinc-600">
             {t("submission.empty")}

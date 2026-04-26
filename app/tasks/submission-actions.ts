@@ -32,7 +32,8 @@ export async function submitTaskWorkAction(taskId: string, formData: FormData) {
 
   const isAssignee = task.assigneeId === user.id;
   const isCollab = task.collaborators.some((c) => c.userId === user.id);
-  if (!isAssignee && !isCollab) {
+  const isAdmin = isOwner(user.role);
+  if (!isAssignee && !isCollab && !isAdmin) {
     return { ok: false, message: "ما تقدر تسلّم مهمة موب لك" };
   }
 
