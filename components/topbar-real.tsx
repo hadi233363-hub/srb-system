@@ -6,6 +6,7 @@ import { getLocale } from "@/lib/i18n/server";
 import { translate } from "@/lib/i18n/dict";
 import { LanguageSwitcher } from "./language-switcher";
 import { NotificationBell } from "./notification-bell";
+import { PushEnableButton } from "./push-enable-button";
 
 export async function TopbarReal() {
   const [settings, locale] = await Promise.all([
@@ -41,6 +42,7 @@ export async function TopbarReal() {
             day: "numeric",
           })}
         </div>
+        <PushEnableButton />
         <NotificationBell />
         <LanguageSwitcher />
       </div>

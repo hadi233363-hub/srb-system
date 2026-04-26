@@ -10,11 +10,18 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db/prisma";
+import { isDeptLeadOrAbove } from "@/lib/auth/roles";
 
 export async function GET() {
   const session = await auth();
   if (!session?.user?.active) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+  // Billing data exposes client names + monthly project budgets — that's
+  // financial information that plain employees shouldn't see. Restrict to
+  // dept_lead and above (same tier that can record transactions).
+  if (!isDeptLeadOrAbove(session.user.role)) {
+    return NextResponse.json({ before: [], due: [], overdue: [], now: new Date().toISOString() });
   }
 
   const now = new Date();

@@ -36,6 +36,19 @@ export type AuditAction =
   | "task.delete"
   | "task.assignee_change"
   | "task.status_change"
+  // Meeting
+  | "meeting.create"
+  | "meeting.update"
+  | "meeting.delete"
+  // Photo shoot
+  | "shoot.create"
+  | "shoot.update"
+  | "shoot.delete"
+  // Equipment
+  | "equipment.create"
+  | "equipment.update"
+  | "equipment.delete"
+  | "equipment.checkout"
   // Finance
   | "tx.create"
   | "tx.update"
@@ -44,7 +57,15 @@ export type AuditAction =
   | "backup.run";
 
 export interface AuditTarget {
-  type: "user" | "project" | "task" | "transaction" | "backup";
+  type:
+    | "user"
+    | "project"
+    | "task"
+    | "transaction"
+    | "backup"
+    | "meeting"
+    | "shoot"
+    | "equipment";
   id?: string | null;
   label?: string | null;
 }
@@ -116,6 +137,16 @@ export const AUDIT_ACTION_LABEL_AR: Record<AuditAction, string> = {
   "task.delete": "حذف مهمة",
   "task.assignee_change": "تغيير مسؤول المهمة",
   "task.status_change": "تغيير حالة المهمة",
+  "meeting.create": "إنشاء اجتماع",
+  "meeting.update": "تعديل اجتماع",
+  "meeting.delete": "حذف اجتماع",
+  "shoot.create": "إنشاء جلسة تصوير",
+  "shoot.update": "تعديل جلسة تصوير",
+  "shoot.delete": "حذف جلسة تصوير",
+  "equipment.create": "إضافة معدات",
+  "equipment.update": "تعديل معدات",
+  "equipment.delete": "حذف معدات",
+  "equipment.checkout": "استلام / تسليم معدات",
   "tx.create": "إضافة معاملة مالية",
   "tx.update": "تعديل معاملة مالية",
   "tx.delete": "حذف معاملة مالية",
@@ -145,6 +176,16 @@ export const AUDIT_ACTION_LABEL_EN: Record<AuditAction, string> = {
   "task.delete": "Delete task",
   "task.assignee_change": "Change task assignee",
   "task.status_change": "Change task status",
+  "meeting.create": "Create meeting",
+  "meeting.update": "Update meeting",
+  "meeting.delete": "Delete meeting",
+  "shoot.create": "Create photo shoot",
+  "shoot.update": "Update photo shoot",
+  "shoot.delete": "Delete photo shoot",
+  "equipment.create": "Add equipment",
+  "equipment.update": "Update equipment",
+  "equipment.delete": "Delete equipment",
+  "equipment.checkout": "Equipment check-out / return",
   "tx.create": "Add transaction",
   "tx.update": "Update transaction",
   "tx.delete": "Delete transaction",

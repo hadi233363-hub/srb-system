@@ -31,7 +31,17 @@ export async function createMeetingAction(formData: FormData) {
   const location = (formData.get("location") as string | null)?.trim() || null;
   const meetingLink = (formData.get("meetingLink") as string | null)?.trim() || null;
   const agendaNotes = (formData.get("agendaNotes") as string | null)?.trim() || null;
-  const ownerId = (formData.get("ownerId") as string | null) || user.id;
+  const rawOwnerId = (formData.get("ownerId") as string | null) || user.id;
+  // Validate ownerId — must reference an active user. Falls back to the
+  // creator if the supplied id is bogus or inactive.
+  let ownerId = user.id;
+  if (rawOwnerId && rawOwnerId !== user.id) {
+    const owner = await prisma.user.findFirst({
+      where: { id: rawOwnerId, active: true },
+      select: { id: true },
+    });
+    ownerId = owner?.id ?? user.id;
+  }
 
   if (!clientName) return { ok: false, message: "اسم العميل مطلوب" };
   if (!meetingAt) return { ok: false, message: "تاريخ ووقت الموعد مطلوبين" };
@@ -57,9 +67,9 @@ export async function createMeetingAction(formData: FormData) {
   });
 
   await logAudit({
-    action: "project.create", // no dedicated meeting action — reusing a category
+    action: "meeting.create",
     target: {
-      type: "project",
+      type: "meeting",
       id: meeting.id,
       label: `اجتماع: ${clientName}`,
     },
@@ -142,9 +152,25 @@ export async function deleteMeetingAction(id: string) {
   return { ok: true };
 }
 
-/** Mark the 1-hour-before reminder as delivered. Idempotent. */
+/** Mark the 1-hour-before reminder as delivered. Idempotent.
+ *
+ * IDOR guard: only the meeting owner OR a manager+ can silence the reminder.
+ * Without this, any active user could call markReminderSent for any meeting
+ * id and suppress the alert for the actual owner.
+ */
 export async function markReminderSentAction(id: string) {
-  await requireAuth();
+  const user = await requireAuth();
+  const meeting = await prisma.clientMeeting.findUnique({
+    where: { id },
+    select: { ownerId: true },
+  });
+  if (!meeting) return { ok: false };
+
+  const { isManagerOrAbove } = await import("@/lib/auth/roles");
+  if (meeting.ownerId !== user.id && !isManagerOrAbove(user.role)) {
+    return { ok: false };
+  }
+
   await prisma.clientMeeting.updateMany({
     where: { id, reminderSentAt: null },
     data: { reminderSentAt: new Date() },

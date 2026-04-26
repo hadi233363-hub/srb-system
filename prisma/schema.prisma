@@ -53,6 +53,7 @@ model User {
   badges             UserBadge[]
   badgesAssigned     UserBadge[]        @relation("BadgeAssignedBy")
   notifications      Notification[]     @relation("NotificationRecipient")
+  pushSubscriptions  PushSubscription[] @relation("PushSubscriptionUser")
 
   @@index([active])
   @@index([role])
@@ -504,6 +505,40 @@ model Notification {
   @@index([recipientId, createdAt])
   @@index([recipientId, readAt])
   @@index([refType, refId])
+}
+
+// Web Push subscription — one row per (user, browser/device). Stores the
+// endpoint the browser gave us when the user clicked "Enable notifications".
+// We hit that endpoint via the web-push library to deliver an alert that the
+// browser displays even when the SRB tab is closed (or the phone is locked,
+// for installed PWAs).
+//
+// One user may have many subscriptions (phone + laptop + work PC). When a
+// subscription expires (HTTP 410 GONE), we delete the row.
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation("PushSubscriptionUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  // Push service endpoint — unique per device. Used as the dedupe key.
+  endpoint  String   @unique
+
+  // Auth + p256dh keys returned by the browser at subscribe time. Required
+  // to encrypt the payload so only this device can read it.
+  p256dh    String
+  auth      String
+
+  // Free-form label to help the user identify this device when they want
+  // to revoke it ("iPhone of Hadi", "Office laptop").
+  userAgent String?
+
+  // Last successful push delivery — used to age out stale subs and to show
+  // a "recently active" badge in the device-list UI.
+  lastUsedAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
 }
 
 // Backup run history — records when backups happened and their size.

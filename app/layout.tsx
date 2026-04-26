@@ -21,6 +21,13 @@ const cairo = Cairo({
 export const metadata: Metadata = {
   title: "SRB — Internal Management",
   description: "SRB internal management system",
+  manifest: "/manifest.json",
+  applicationName: "SRB",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "SRB",
+  },
 };
 
 export const viewport = {

@@ -3,8 +3,15 @@
 // drop new rows here. We deliberately keep titles + bodies pre-localized
 // so we can avoid round-tripping through i18n at render time — the writer
 // uses the SAME locale resolver as the rest of the app.
+//
+// Side-effect: every successful createNotification call also fires a Web
+// Push to all of the recipient's registered devices. That's the path that
+// reaches phones whose browser is closed / locked — the desktop bell only
+// updates when the tab is actually open. Push failures are swallowed so a
+// dead subscription never blocks the in-app inbox.
 
 import { prisma } from "./prisma";
+import { pushToUser, type PushPayload } from "@/lib/push/web-push";
 
 export type NotificationSeverity = "info" | "success" | "warning" | "danger";
 
@@ -37,7 +44,7 @@ export async function createNotification(input: CreateNotificationInput) {
     if (existing) return existing;
   }
 
-  return prisma.notification.create({
+  const created = await prisma.notification.create({
     data: {
       recipientId: input.recipientId,
       kind: input.kind,
@@ -49,6 +56,19 @@ export async function createNotification(input: CreateNotificationInput) {
       refId: input.refId ?? null,
     },
   });
+
+  // Fan out to web-push so the alert reaches the user's phone / locked screen.
+  // Best-effort — never blocks notification creation.
+  const pushPayload: PushPayload = {
+    title: input.title,
+    body: input.body ?? "",
+    url: input.linkUrl ?? "/",
+    tag: input.refId ? `${input.kind}-${input.refId}` : input.kind,
+    severity: input.severity ?? "info",
+  };
+  pushToUser(input.recipientId, pushPayload).catch(() => null);
+
+  return created;
 }
 
 /**
