@@ -5,6 +5,10 @@ const isDev = process.env.NODE_ENV !== "production";
 // CSP — strict by default; relaxes only what Next.js / Tailwind / Google fonts
 // genuinely need. 'unsafe-inline' on style-src covers Next's inline <style> tags
 // and Tailwind's runtime utilities. 'unsafe-eval' is dev-only for HMR.
+//
+// frame-src: needed because the photo-shoot detail page embeds the location
+// as a Google Maps iframe. Without this entry the directive falls back to
+// default-src 'self' and the map renders as a blocked-content placeholder.
 const csp = [
   "default-src 'self'",
   "img-src 'self' data: blob: https:",
@@ -12,6 +16,13 @@ const csp = [
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
   `connect-src 'self'${isDev ? " ws: wss:" : ""}`,
+  // Allow embedded Google Maps + YouTube. Both used by the shoots page (map)
+  // and likely future surfaces (reference videos in shot lists).
+  "frame-src 'self' https://www.google.com https://maps.google.com https://www.youtube.com https://www.youtube-nocookie.com",
+  // Worker scripts — service worker (push notifications) lives at /sw.js so
+  // it loads from same-origin; this entry stops Next.js from blocking
+  // worker registration in production builds.
+  "worker-src 'self'",
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",
