@@ -93,18 +93,23 @@ export function KanbanBoard({ tasks, users, projects, allowProjectChange, viewer
             >
               <div className="mb-3 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <span
-                    className={cn(
-                      "h-2 w-2 rounded-full",
-                      col === "todo"
-                        ? "bg-zinc-500"
-                        : col === "in_progress"
-                        ? "bg-sky-500"
-                        : col === "in_review"
-                        ? "bg-amber-500"
-                        : "bg-emerald-500"
-                    )}
-                  />
+                  {col === "in_review" ? (
+                    <span className="relative flex h-2 w-2">
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-75" />
+                      <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-500" />
+                    </span>
+                  ) : (
+                    <span
+                      className={cn(
+                        "h-2 w-2 rounded-full",
+                        col === "todo"
+                          ? "bg-zinc-500"
+                          : col === "in_progress"
+                          ? "bg-sky-500"
+                          : "bg-emerald-500"
+                      )}
+                    />
+                  )}
                   <h3 className="text-sm font-semibold text-zinc-200">
                     {t(`taskStatus.${col}`)}
                   </h3>
@@ -197,6 +202,15 @@ function TaskCard({
         <div className="mb-1.5 flex items-center gap-1 text-[10px] font-semibold text-rose-400">
           <AlertCircle className="h-3 w-3" />
           {t("tasks.overdueByDays").replace("{n}", String(Math.abs(days ?? 0)))}
+        </div>
+      )}
+      {task.status === "in_review" && !overdue && (
+        <div className="mb-1.5 flex items-center gap-1.5 text-[10px] font-semibold text-amber-300">
+          <span className="relative flex h-2 w-2">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-75" />
+            <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-400" />
+          </span>
+          {t("submission.inReviewBadge")}
         </div>
       )}
       <div className="mb-1 text-sm font-medium text-zinc-100">{task.title}</div>

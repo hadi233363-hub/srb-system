@@ -1301,6 +1301,76 @@ export const DICT: Record<string, { ar: string; en: string }> = {
     en: "Changes requested",
   },
 
+  // Polished submission UI (smart link / drag-drop / review panel)
+  "submission.urlLabel": { ar: "رابط التسليم", en: "Submission link" },
+  "submission.urlPlaceholder": {
+    ar: "الصق رابط Drive أو Figma أو YouTube...",
+    en: "Paste a Drive, Figma, or YouTube link...",
+  },
+  "submission.dropZoneIdle": {
+    ar: "اسحب الملف هنا أو اضغط للاختيار",
+    en: "Drag a file here or click to choose",
+  },
+  "submission.dropZoneActive": {
+    ar: "أفلت الملف هنا",
+    en: "Drop the file here",
+  },
+  "submission.uploading": { ar: "جاري الرفع...", en: "Uploading..." },
+  "submission.uploadFailed": {
+    ar: "فشل رفع الملف",
+    en: "Upload failed",
+  },
+  "submission.badType": {
+    ar: "نوع الملف غير مدعوم — JPG / PNG / GIF / PDF",
+    en: "Unsupported file type — JPG / PNG / GIF / PDF",
+  },
+  "submission.replaceFile": { ar: "استبدل", en: "Replace" },
+  "submission.removeFile": { ar: "حذف", en: "Remove" },
+  "submission.requireOne": {
+    ar: "أرفق رابط أو ملف على الأقل",
+    en: "Attach a link or a file",
+  },
+  "submission.submitButton": {
+    ar: "📤 سلّم المهمة للمراجعة",
+    en: "📤 Submit for review",
+  },
+  "submission.submitting": { ar: "جاري التسليم...", en: "Submitting..." },
+  "submission.toastSubmitted": {
+    ar: "✅ تم التسليم — بانتظار موافقة المسؤول",
+    en: "✅ Submitted — awaiting owner approval",
+  },
+  "submission.toastApproved": {
+    ar: "✅ تم قبول التسليم",
+    en: "✅ Submission approved",
+  },
+  "submission.toastRejected": {
+    ar: "↩️ تم إرسال الطلب للموظف",
+    en: "↩️ Sent back to the employee",
+  },
+  "submission.reviewTitle": {
+    ar: "تسليم بانتظار مراجعتك",
+    en: "Submission awaiting your review",
+  },
+  "submission.approveButton": { ar: "قبلت التسليم", en: "Approve" },
+  "submission.rejectButton": { ar: "أعد الشغل", en: "Send back" },
+  "submission.reasonPlaceholderRich": {
+    ar: "اكتب سبب الإعادة...",
+    en: "Reason for sending back...",
+  },
+  "submission.approvedHeader": {
+    ar: "تم قبول هذا التسليم",
+    en: "Submission approved",
+  },
+  "submission.changesRequestedHeader": {
+    ar: "طُلب منك إعادة العمل",
+    en: "Changes requested",
+  },
+  "submission.history": { ar: "سجل التسليمات", en: "Submission history" },
+  "submission.inReviewBadge": {
+    ar: "بانتظار المراجعة",
+    en: "Awaiting review",
+  },
+
   // ---------------------------------------------------------------------------
   // Project phases
   // ---------------------------------------------------------------------------

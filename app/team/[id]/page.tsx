@@ -314,6 +314,14 @@ export default async function EmployeeDetailPage(props: {
               project: t.project,
               estimatedHours: t.estimatedHours,
               collaborators: t.collaborators,
+              submissionUrl: t.submissionUrl,
+              submissionFileUrl: t.submissionFileUrl,
+              submissionFileName: t.submissionFileName,
+              submissionFileType: t.submissionFileType,
+              submissionNote: t.submissionNote,
+              submittedAt: t.submittedAt,
+              reviewNote: t.reviewNote,
+              reviewedAt: t.reviewedAt,
             }))}
             users={allUsers}
             projects={allProjects}
