@@ -12,6 +12,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db/prisma";
 import { logAudit } from "@/lib/db/audit";
+import { isOwner } from "@/lib/auth/roles";
 import { createNotificationMany } from "@/lib/db/notifications";
 import { sanitizeLinkUrl, saveUploadedFile } from "@/lib/uploads";
 import { safeString, MAX_LONG_TEXT, MAX_NAME_LEN } from "@/lib/input-limits";
@@ -37,11 +38,13 @@ export async function POST(
     return NextResponse.json({ error: "not_found" }, { status: 404 });
   }
 
-  // Only the assignee or one of the collaborators may submit.
+  // Assignee + collaborators can submit. Admin (the owner of the system)
+  // can also submit on behalf — they manage every project end-to-end.
   const me = session.user.id;
   const isAssignee = task.assigneeId === me;
   const isCollab = task.collaborators.some((c) => c.userId === me);
-  if (!isAssignee && !isCollab) {
+  const isAdmin = isOwner(session.user.role);
+  if (!isAssignee && !isCollab && !isAdmin) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
 
