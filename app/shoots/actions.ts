@@ -67,23 +67,21 @@ export async function createShootAction(formData: FormData) {
     },
   });
 
-  // Notify each crew member that they've been assigned a shoot. Skip the
-  // creator since they obviously know. The 24h-before / 1h-before reminders
+  // Notify EVERY crew member (including the creator if they added themselves)
+  // — the whole point is the push reaches their phone, even if they're
+  // looking at the desktop right now. The 24h-before / 1h-before reminders
   // fire later via the server scheduler.
   if (crewIds.length > 0) {
     const { createNotificationMany } = await import("@/lib/db/notifications");
-    const others = crewIds.filter((uid) => uid !== user.id);
-    if (others.length > 0) {
-      await createNotificationMany(others, {
-        kind: "shoot.assigned",
-        severity: "info",
-        title: `📸 تصوير جديد عليك — ${title}`,
-        body: `${shootDate.toLocaleString("ar")} · ${location}`,
-        linkUrl: "/shoots",
-        refType: "shoot",
-        refId: shoot.id,
-      });
-    }
+    await createNotificationMany(crewIds, {
+      kind: "shoot.assigned",
+      severity: "info",
+      title: `📸 تصوير جديد عليك — ${title}`,
+      body: `${shootDate.toLocaleString("ar")} · ${location}`,
+      linkUrl: "/shoots",
+      refType: "shoot",
+      refId: shoot.id,
+    });
   }
 
   await logAudit({

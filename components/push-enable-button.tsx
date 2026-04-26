@@ -17,6 +17,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Bell, BellOff, BellRing, Loader2 } from "lucide-react";
 import { useT } from "@/lib/i18n/client";
 import { cn } from "@/lib/cn";
+import { csrfFetch } from "@/lib/csrf-client";
 
 type State = "unknown" | "unsupported" | "off" | "enabling" | "on" | "error";
 
@@ -125,20 +126,11 @@ export function PushEnableButton() {
         ) as unknown as BufferSource,
       });
 
-      // 5. Tell the server.
-      const csrfToken =
-        document.cookie
-          .split(";")
-          .map((c) => c.trim())
-          .find((c) => c.startsWith("csrf-token="))
-          ?.split("=")[1] ?? "";
-
-      const res = await fetch("/api/push/subscribe", {
+      // 5. Tell the server. csrfFetch reads the csrf-token cookie and attaches
+      // it as x-csrf-token automatically — same path used everywhere else.
+      const res = await csrfFetch("/api/push/subscribe", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-csrf-token": csrfToken,
-        },
+        headers: { "Content-Type": "application/json" },
         credentials: "same-origin",
         body: JSON.stringify({ subscription: sub.toJSON() }),
       });
@@ -161,18 +153,9 @@ export function PushEnableButton() {
       const reg = await navigator.serviceWorker.getRegistration("/sw.js");
       const sub = reg ? await reg.pushManager.getSubscription() : null;
       if (sub) {
-        const csrfToken =
-          document.cookie
-            .split(";")
-            .map((c) => c.trim())
-            .find((c) => c.startsWith("csrf-token="))
-            ?.split("=")[1] ?? "";
-        await fetch("/api/push/unsubscribe", {
+        await csrfFetch("/api/push/unsubscribe", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-csrf-token": csrfToken,
-          },
+          headers: { "Content-Type": "application/json" },
           credentials: "same-origin",
           body: JSON.stringify({ endpoint: sub.endpoint }),
         });
