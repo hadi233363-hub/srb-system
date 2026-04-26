@@ -24,8 +24,12 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { useLocale, useT } from "@/lib/i18n/client";
-
-type Role = "admin" | "manager" | "employee";
+import {
+  isDeptLeadOrAbove,
+  isManagerOrAbove,
+  isOwner,
+  type Role,
+} from "@/lib/auth/roles";
 
 // Hide most of the local part of an email so the address can still be
 // recognised by its owner without exposing it to anyone glancing at the screen.
@@ -42,12 +46,17 @@ function maskEmail(email: string): string {
   return `${head}***${domain}`;
 }
 
+// minRole controls which tier can see a sidebar entry. We resolve it against
+// the user's role via meets() — so e.g. minRole="manager" hides the entry from
+// employees + dept_leads but shows it to managers and owners.
+type MinRole = "owner" | "manager" | "dept_lead" | "any";
+
 interface NavItem {
   href: string;
   labelKey: string;
   icon: typeof Home;
   highlight?: boolean;
-  adminOnly?: boolean;
+  minRole?: MinRole;
 }
 
 const nav: NavItem[] = [
@@ -58,13 +67,24 @@ const nav: NavItem[] = [
   { href: "/meetings", labelKey: "nav.meetings", icon: Calendar, highlight: true },
   { href: "/shoots", labelKey: "nav.shoots", icon: Camera, highlight: true },
   { href: "/equipment", labelKey: "nav.equipment", icon: Package },
-  { href: "/finance", labelKey: "nav.finance", icon: DollarSign },
-  { href: "/reports", labelKey: "nav.reports", icon: FileText, adminOnly: true },
-  { href: "/admin/users", labelKey: "nav.admin_users", icon: ShieldCheck, adminOnly: true },
-  { href: "/admin/audit", labelKey: "nav.admin_audit", icon: Shield, adminOnly: true },
-  { href: "/admin/backup", labelKey: "nav.admin_backup", icon: Archive, adminOnly: true },
-  { href: "/admin/theme", labelKey: "nav.admin_theme", icon: Palette, adminOnly: true },
+  // Finance: dept_lead and above can OPEN the page (to record transactions).
+  // The owner-only totals view is enforced inside the page itself.
+  { href: "/finance", labelKey: "nav.finance", icon: DollarSign, minRole: "dept_lead" },
+  { href: "/reports", labelKey: "nav.reports", icon: FileText, minRole: "owner" },
+  // User approval is now manager-accessible. Owner sees it too via inheritance.
+  { href: "/admin/users", labelKey: "nav.admin_users", icon: ShieldCheck, minRole: "manager" },
+  { href: "/admin/audit", labelKey: "nav.admin_audit", icon: Shield, minRole: "owner" },
+  { href: "/admin/backup", labelKey: "nav.admin_backup", icon: Archive, minRole: "owner" },
+  { href: "/admin/theme", labelKey: "nav.admin_theme", icon: Palette, minRole: "owner" },
 ];
+
+function visibleTo(role: Role, min: MinRole | undefined): boolean {
+  if (!min || min === "any") return true;
+  if (min === "owner") return isOwner(role);
+  if (min === "manager") return isManagerOrAbove(role);
+  if (min === "dept_lead") return isDeptLeadOrAbove(role);
+  return true;
+}
 
 interface Props {
   userRole: Role;
@@ -141,7 +161,7 @@ export function Sidebar({ userRole, userName, userEmail, logoPath }: Props) {
       </div>
       <nav className="flex flex-col gap-0.5 overflow-y-auto">
         {nav.map((item) => {
-          if (item.adminOnly && userRole !== "admin") return null;
+          if (!visibleTo(userRole, item.minRole)) return null;
           const Icon = item.icon;
           const active =
             item.href === "/"
@@ -200,6 +220,8 @@ export function Sidebar({ userRole, userName, userEmail, logoPath }: Props) {
                   ? "bg-rose-500/10 text-rose-400"
                   : userRole === "manager"
                   ? "bg-amber-500/10 text-amber-400"
+                  : userRole === "department_lead"
+                  ? "bg-sky-500/10 text-sky-400"
                   : "bg-emerald-500/10 text-emerald-400"
               )}
             >

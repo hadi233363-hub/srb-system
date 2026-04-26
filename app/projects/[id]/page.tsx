@@ -18,6 +18,7 @@ import {
   isOverdue,
 } from "@/lib/db/helpers";
 import { KanbanBoard } from "@/components/tasks/kanban-board";
+import { isDeptLeadOrAbove } from "@/lib/auth/roles";
 import { NewTaskButton } from "@/components/tasks/new-task-button";
 import { ProjectMembersManager } from "./members-manager";
 import { ProjectActionsMenu } from "./project-actions-menu";
@@ -31,8 +32,7 @@ export default async function ProjectDetailPage(props: {
   const { id } = await props.params;
   const [session, locale] = await Promise.all([auth(), getLocale()]);
   const t = (key: string) => translate(key, locale);
-  const canManage =
-    session?.user.role === "admin" || session?.user.role === "manager";
+  const canManage = isDeptLeadOrAbove(session?.user.role);
 
   const project = await prisma.project.findUnique({
     where: { id },

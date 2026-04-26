@@ -4,14 +4,17 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db/prisma";
 import { logAudit } from "@/lib/db/audit";
 import {
-  requireActiveUser as requireAuth,
-  requireAdmin,
+  requireDeptLeadOrAbove,
+  requireOwner,
 } from "@/lib/auth-guards";
 import { safeAmount, safeString, MAX_LONG_TEXT } from "@/lib/input-limits";
 
 export async function createTransactionAction(formData: FormData) {
-  // Any active user can record numbers — totals stay admin-only (gated in the UI).
-  const user = await requireAuth();
+  // Recording numbers (income / expense / salary) is allowed for anyone at
+  // dept_lead or above. Plain employees can NOT record transactions — that
+  // closes the previous hole where any active user could create financial
+  // records. The aggregation dashboard stays owner-only (page-level gate).
+  const user = await requireDeptLeadOrAbove();
 
   const kind = formData.get("kind") as string | null;
   const category = formData.get("category") as string | null;
@@ -73,8 +76,10 @@ export async function createTransactionAction(formData: FormData) {
 }
 
 export async function deleteTransactionAction(id: string) {
-  // Only admin can delete — prevents employees from clearing their own entries.
-  await requireAdmin();
+  // Only the owner (الرئيس) can delete — prevents managers / dept_leads from
+  // wiping out their own entries to hide the trail. Audit log keeps the record
+  // even after the transaction itself is gone.
+  await requireOwner();
   const before = await prisma.transaction.findUnique({
     where: { id },
     include: { project: { select: { title: true } } },

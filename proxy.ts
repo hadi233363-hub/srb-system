@@ -16,21 +16,30 @@ import {
   generateCsrfToken,
   timingSafeEqual,
 } from "@/lib/csrf";
+import { isManagerOrAbove, isOwner } from "@/lib/auth/roles";
 
 const { auth } = NextAuth(authConfig);
 
 const PUBLIC_PATHS = new Set(["/login", "/403"]);
 const PUBLIC_PREFIXES = ["/api/auth"];
 
-// Paths reserved for admins. Includes UI routes under /admin/* and the legacy
-// /api/sim/* control surface (CEO-only actions).
-const ADMIN_PREFIXES = [
-  "/admin",
+// Paths reserved for the OWNER (الرئيس) — president-only. The finance dashboard
+// (totals + P&L), audit log, backups, theming, and the simulator control surface.
+// The /admin/users page is now manager-accessible (handled below) so it is NOT
+// in this list.
+const OWNER_PREFIXES = [
+  "/admin/audit",
+  "/admin/backup",
+  "/admin/theme",
   "/api/admin",
   "/api/sim/control",
   "/api/sim/decide",
   "/api/sim/action",
 ];
+
+// Paths the manager (المدير) can reach — and by inheritance, the owner.
+// Currently: user approval + role assignment.
+const MANAGER_PREFIXES = ["/admin/users"];
 
 // API paths exempt from CSRF — Auth.js endpoints have their own CSRF guard.
 const CSRF_EXEMPT_PREFIXES = ["/api/auth"];
@@ -41,8 +50,12 @@ function startsWithSegment(path: string, prefix: string): boolean {
   return path === prefix || path.startsWith(prefix + "/");
 }
 
-function isAdminPath(path: string): boolean {
-  return ADMIN_PREFIXES.some((p) => startsWithSegment(path, p));
+function isOwnerPath(path: string): boolean {
+  return OWNER_PREFIXES.some((p) => startsWithSegment(path, p));
+}
+
+function isManagerPath(path: string): boolean {
+  return MANAGER_PREFIXES.some((p) => startsWithSegment(path, p));
 }
 
 function isCsrfExempt(path: string): boolean {
@@ -76,8 +89,20 @@ export default auth((req) => {
     return NextResponse.redirect(url);
   }
 
-  // 2) Admin RBAC — runs after auth so we know the role.
-  if (isAuthed && isAdminPath(path) && role !== "admin") {
+  // 2) RBAC — runs after auth so we know the role.
+  //    a) Owner-only routes (finance API, audit, backup, theme, sim control)
+  //    b) Manager-or-above routes (user approval / role assignment)
+  if (isAuthed && isOwnerPath(path) && !isOwner(role)) {
+    if (path.startsWith("/api/")) {
+      return NextResponse.json({ error: "forbidden" }, { status: 403 });
+    }
+    const url = req.nextUrl.clone();
+    url.pathname = "/403";
+    url.search = "";
+    return NextResponse.redirect(url);
+  }
+
+  if (isAuthed && isManagerPath(path) && !isManagerOrAbove(role)) {
     if (path.startsWith("/api/")) {
       return NextResponse.json({ error: "forbidden" }, { status: 403 });
     }

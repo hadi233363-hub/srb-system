@@ -18,13 +18,14 @@ import { cn } from "@/lib/cn";
 import { ShootForm } from "./shoot-form";
 import { CalendarView } from "../meetings/calendar-view";
 import { ShootActions } from "./shoot-actions";
+import { isDeptLeadOrAbove } from "@/lib/auth/roles";
 
 export default async function ShootsPage() {
   const [session, locale] = await Promise.all([auth(), getLocale()]);
   const t = (key: string) => translate(key, locale);
   const user = session?.user;
   if (!user) return null;
-  const canManage = user.role === "admin" || user.role === "manager";
+  const canManage = isDeptLeadOrAbove(user.role);
 
   const [shoots, users, projects, equipment] = await Promise.all([
     prisma.photoShoot.findMany({

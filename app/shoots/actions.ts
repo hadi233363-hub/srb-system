@@ -5,7 +5,7 @@ import { prisma } from "@/lib/db/prisma";
 import { logAudit } from "@/lib/db/audit";
 import {
   requireActiveUser as requireAuth,
-  requireManagerOrAdmin,
+  requireDeptLeadOrAbove,
 } from "@/lib/auth-guards";
 
 function parseDateTime(raw: string | null): Date | null {
@@ -23,7 +23,7 @@ function parseIdCsv(raw: string | null): string[] {
 }
 
 export async function createShootAction(formData: FormData) {
-  const user = await requireManagerOrAdmin();
+  const user = await requireDeptLeadOrAbove();
 
   const title = (formData.get("title") as string | null)?.trim();
   const shootDate = parseDateTime(formData.get("shootDate") as string | null);
@@ -78,7 +78,7 @@ export async function createShootAction(formData: FormData) {
 }
 
 export async function updateShootAction(id: string, formData: FormData) {
-  await requireManagerOrAdmin();
+  await requireDeptLeadOrAbove();
 
   const data: Record<string, unknown> = {};
   const stringFields = [
@@ -149,7 +149,7 @@ export async function updateShootAction(id: string, formData: FormData) {
 }
 
 export async function deleteShootAction(id: string) {
-  await requireManagerOrAdmin();
+  await requireDeptLeadOrAbove();
   const before = await prisma.photoShoot.findUnique({ where: { id } });
   await prisma.photoShoot.delete({ where: { id } });
   if (before) {

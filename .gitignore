@@ -42,6 +42,9 @@ auth.db-*
 prisma/app.db
 prisma/app.db-*
 prisma/app.db.*
+prisma/dev.db
+prisma/dev.db-*
+prisma/dev.db.*
 prisma/migrations/
 app.db
 app.db-*

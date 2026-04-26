@@ -6,6 +6,7 @@ import { translate } from "@/lib/i18n/dict";
 import { MeetingForm } from "./meeting-form";
 import { MeetingsList } from "./meetings-list";
 import { CalendarView } from "./calendar-view";
+import { isDeptLeadOrAbove } from "@/lib/auth/roles";
 
 export default async function MeetingsPage() {
   const [session, locale] = await Promise.all([auth(), getLocale()]);
@@ -13,7 +14,7 @@ export default async function MeetingsPage() {
   const user = session?.user;
   if (!user) return null;
 
-  const canManage = user.role === "admin" || user.role === "manager";
+  const canManage = isDeptLeadOrAbove(user.role);
 
   const [meetings, users] = await Promise.all([
     prisma.clientMeeting.findMany({

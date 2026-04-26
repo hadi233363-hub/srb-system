@@ -5,6 +5,7 @@ import { Check, Clock, Plus, Trash2, UserPlus, X } from "lucide-react";
 import { cn } from "@/lib/cn";
 import type { Badge as BadgeRow, User, UserBadge } from "@prisma/client";
 import { useT } from "@/lib/i18n/client";
+import { type Role } from "@/lib/auth/roles";
 import {
   addUserAction,
   approveUserAction,
@@ -15,11 +16,12 @@ import {
   toggleUserBadgeAction,
 } from "./actions";
 
-type AuthRole = "admin" | "manager" | "employee";
+type AuthRole = Role;
 
 const ROLE_COLOR: Record<AuthRole, string> = {
   admin: "bg-rose-500/10 text-rose-400 border-rose-500/30",
   manager: "bg-amber-500/10 text-amber-400 border-amber-500/30",
+  department_lead: "bg-sky-500/10 text-sky-400 border-sky-500/30",
   employee: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30",
 };
 
@@ -30,6 +32,12 @@ type UserWithBadges = User & {
 interface Props {
   users: UserWithBadges[];
   currentUserId: string;
+  // Role of the signed-in actor — used to gate the reject button (owner only).
+  currentUserRole: AuthRole;
+  // Roles this actor is allowed to assign. Owners get the full list; managers
+  // get only [department_lead, employee] so they can never accidentally promote
+  // someone to a level above themselves.
+  allowedRoles: AuthRole[];
   allBadges: BadgeRow[];
   locale: "ar" | "en";
 }
@@ -37,6 +45,8 @@ interface Props {
 export function UsersAdminClient({
   users,
   currentUserId,
+  currentUserRole,
+  allowedRoles,
   allBadges,
   locale,
 }: Props) {
@@ -88,6 +98,8 @@ export function UsersAdminClient({
                 key={u.id}
                 user={u}
                 isPending={isPending}
+                allowedRoles={allowedRoles}
+                canReject={currentUserRole === "admin"}
                 onApprove={(role, dept) =>
                   startTransition(async () => {
                     const res = await approveUserAction(u.id, role, dept);
@@ -166,12 +178,21 @@ export function UsersAdminClient({
               <select
                 name="role"
                 required
-                defaultValue="employee"
+                defaultValue={allowedRoles.includes("employee") ? "employee" : allowedRoles[0]}
                 className="w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 focus:border-emerald-500/50 focus:outline-none"
               >
-                <option value="admin">{t("admin.users.roleOptAdmin")}</option>
-                <option value="manager">{t("admin.users.roleOptManager")}</option>
-                <option value="employee">{t("admin.users.roleOptEmployee")}</option>
+                {allowedRoles.includes("admin") && (
+                  <option value="admin">{t("admin.users.roleOptAdmin")}</option>
+                )}
+                {allowedRoles.includes("manager") && (
+                  <option value="manager">{t("admin.users.roleOptManager")}</option>
+                )}
+                {allowedRoles.includes("department_lead") && (
+                  <option value="department_lead">{t("admin.users.roleOptDeptLead")}</option>
+                )}
+                {allowedRoles.includes("employee") && (
+                  <option value="employee">{t("admin.users.roleOptEmployee")}</option>
+                )}
               </select>
             </Field>
             <Field label={t("admin.users.field.department")}>
@@ -210,6 +231,17 @@ export function UsersAdminClient({
           )}
           {approvedUsers.map((u) => {
             const isSelf = u.id === currentUserId;
+            // A manager (المدير) cannot edit / delete another manager or the
+            // owner — only the owner can. We disable the controls so the UI
+            // matches what the server enforces.
+            const isAboveActor =
+              currentUserRole !== "admin" &&
+              (u.role === "admin" || u.role === "manager");
+            const lockReason = isAboveActor
+              ? t("admin.users.lockedHigherRank")
+              : isSelf
+              ? t("admin.users.youLabel")
+              : null;
             return (
               <li key={u.id} className="flex flex-col gap-3 px-5 py-3">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -251,14 +283,19 @@ export function UsersAdminClient({
                       )}
                     </div>
                   </div>
-                  <div className="flex shrink-0 items-center gap-2">
+                  <div
+                    className="flex shrink-0 items-center gap-2"
+                    title={lockReason ?? undefined}
+                  >
                     <select
-                      disabled={isSelf || isPending}
+                      disabled={isSelf || isPending || isAboveActor}
                       value={u.role as AuthRole}
                       onChange={(e) => {
                         const newRole = e.target.value as AuthRole;
                         startTransition(async () => {
-                          await changeUserRoleAction(u.id, newRole);
+                          const res = await changeUserRoleAction(u.id, newRole);
+                          if (!res.ok)
+                            showFlash("error", res.message ?? t("common.error"));
                         });
                       }}
                       className={cn(
@@ -266,15 +303,32 @@ export function UsersAdminClient({
                         ROLE_COLOR[u.role as AuthRole]
                       )}
                     >
-                      <option value="admin">{roleLabel("admin")}</option>
-                      <option value="manager">{roleLabel("manager")}</option>
-                      <option value="employee">{roleLabel("employee")}</option>
+                      {/* Always render the user's CURRENT role so the dropdown
+                          can display it even if the actor isn't allowed to assign
+                          it. The action server-side rejects illegal switches. */}
+                      {!allowedRoles.includes(u.role as AuthRole) && (
+                        <option value={u.role}>{roleLabel(u.role as AuthRole)}</option>
+                      )}
+                      {allowedRoles.includes("admin") && (
+                        <option value="admin">{roleLabel("admin")}</option>
+                      )}
+                      {allowedRoles.includes("manager") && (
+                        <option value="manager">{roleLabel("manager")}</option>
+                      )}
+                      {allowedRoles.includes("department_lead") && (
+                        <option value="department_lead">{roleLabel("department_lead")}</option>
+                      )}
+                      {allowedRoles.includes("employee") && (
+                        <option value="employee">{roleLabel("employee")}</option>
+                      )}
                     </select>
                     <button
-                      disabled={isSelf || isPending}
+                      disabled={isSelf || isPending || isAboveActor}
                       onClick={() => {
                         startTransition(async () => {
-                          await toggleUserActiveAction(u.id, !u.active);
+                          const res = await toggleUserActiveAction(u.id, !u.active);
+                          if (!res.ok)
+                            showFlash("error", res.message ?? t("common.error"));
                         });
                       }}
                       className={cn(
@@ -289,7 +343,7 @@ export function UsersAdminClient({
                         : t("admin.users.toggleActivate")}
                     </button>
                     <button
-                      disabled={isSelf || isPending}
+                      disabled={isSelf || isPending || isAboveActor}
                       onClick={() => {
                         if (!confirm(`${t("admin.users.deleteConfirm")} ${u.name}`))
                           return;
@@ -447,16 +501,23 @@ function BadgeChip({
 function PendingRow({
   user,
   isPending,
+  allowedRoles,
+  canReject,
   onApprove,
   onReject,
 }: {
   user: User;
   isPending: boolean;
+  allowedRoles: AuthRole[];
+  canReject: boolean;
   onApprove: (role: AuthRole, department: string | null) => void;
   onReject: () => void;
 }) {
   const t = useT();
-  const [role, setRole] = useState<AuthRole>("employee");
+  const defaultRole: AuthRole = allowedRoles.includes("employee")
+    ? "employee"
+    : allowedRoles[0] ?? "employee";
+  const [role, setRole] = useState<AuthRole>(defaultRole);
   const [department, setDepartment] = useState("");
 
   return (
@@ -477,9 +538,18 @@ function PendingRow({
             onChange={(e) => setRole(e.target.value as AuthRole)}
             className="rounded-md border border-amber-500/30 bg-zinc-950 px-2 py-1 text-xs text-zinc-100"
           >
-            <option value="employee">{t("role.employee")}</option>
-            <option value="manager">{t("role.manager")}</option>
-            <option value="admin">{t("role.admin")}</option>
+            {allowedRoles.includes("employee") && (
+              <option value="employee">{t("role.employee")}</option>
+            )}
+            {allowedRoles.includes("department_lead") && (
+              <option value="department_lead">{t("role.department_lead")}</option>
+            )}
+            {allowedRoles.includes("manager") && (
+              <option value="manager">{t("role.manager")}</option>
+            )}
+            {allowedRoles.includes("admin") && (
+              <option value="admin">{t("role.admin")}</option>
+            )}
           </select>
         </label>
         <input
@@ -497,17 +567,19 @@ function PendingRow({
           <Check className="h-3 w-3" />
           {t("admin.pending.approve")}
         </button>
-        <button
-          onClick={() => {
-            if (!confirm(`${t("admin.pending.reject")}: ${user.email}?`)) return;
-            onReject();
-          }}
-          disabled={isPending}
-          className="flex items-center gap-1 rounded-md border border-rose-500/30 px-3 py-1 text-xs text-rose-400 transition hover:bg-rose-500/10 disabled:opacity-40"
-        >
-          <X className="h-3 w-3" />
-          {t("admin.pending.reject")}
-        </button>
+        {canReject && (
+          <button
+            onClick={() => {
+              if (!confirm(`${t("admin.pending.reject")}: ${user.email}?`)) return;
+              onReject();
+            }}
+            disabled={isPending}
+            className="flex items-center gap-1 rounded-md border border-rose-500/30 px-3 py-1 text-xs text-rose-400 transition hover:bg-rose-500/10 disabled:opacity-40"
+          >
+            <X className="h-3 w-3" />
+            {t("admin.pending.reject")}
+          </button>
+        )}
       </div>
     </li>
   );

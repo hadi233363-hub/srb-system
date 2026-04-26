@@ -14,12 +14,12 @@ import { NewProjectButton } from "./new-project-button";
 import { getLocale } from "@/lib/i18n/server";
 import { translate } from "@/lib/i18n/dict";
 import { InvoiceBadge } from "@/components/projects/invoice-badge";
+import { isDeptLeadOrAbove } from "@/lib/auth/roles";
 
 export default async function ProjectsPage() {
   const [session, locale] = await Promise.all([auth(), getLocale()]);
   const t = (key: string) => translate(key, locale);
-  const canManage =
-    session?.user.role === "admin" || session?.user.role === "manager";
+  const canManage = isDeptLeadOrAbove(session?.user.role);
 
   const [projects, users] = await Promise.all([
     prisma.project.findMany({

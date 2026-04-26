@@ -19,6 +19,10 @@ import {
   markShootDayReminderSentAction,
   markShootHourReminderSentAction,
 } from "@/app/shoots/actions";
+import {
+  markTaskBeforeReminderSentAction,
+  markTaskOverdueReminderSentAction,
+} from "@/app/tasks/actions";
 
 const POLL_INTERVAL_MS = 30_000; // 30 seconds
 const REMIND_MINUTES_BEFORE = 60; // 1 hour
@@ -47,6 +51,14 @@ interface UpcomingShoot {
   reminderDayBeforeSentAt: string | null;
   reminderHourBeforeSentAt: string | null;
   crew: { user: { id: string; name: string } }[];
+}
+
+interface UpcomingTask {
+  id: string;
+  title: string;
+  dueAt: string;
+  priority: string;
+  project: { id: string; title: string; deadlineAt: string | null } | null;
 }
 
 /** Small helper: play a short beep so the alert is audible even if notifications are muted. */
@@ -146,6 +158,59 @@ export function MeetingReminder() {
     [t]
   );
 
+  const fireTask = useCallback(
+    (task: UpcomingTask, kind: "due_soon" | "overdue") => {
+      const dueDate = new Date(task.dueAt);
+      const minsAway = Math.round((dueDate.getTime() - Date.now()) / 60_000);
+      const isOverdue = kind === "overdue";
+
+      const title = isOverdue
+        ? `⏰ ${t("tasks.reminder.overdue")} · ${task.title}`
+        : `⌛ ${t("tasks.reminder.dueSoon")} · ${task.title}`;
+      const projectSuffix = task.project ? ` · ${task.project.title}` : "";
+      const slackHint =
+        isOverdue && task.project?.deadlineAt
+          ? ` · ${t("tasks.reminder.deliveryStillOk")}`
+          : "";
+      const body = isOverdue
+        ? `${t("tasks.reminder.lateBy")} ${Math.abs(minsAway)} ${t(
+            "tasks.reminder.minutes"
+          )}${projectSuffix}${slackHint}`
+        : `${t("tasks.reminder.in")} ${Math.max(0, minsAway)} ${t(
+            "tasks.reminder.minutes"
+          )}${projectSuffix}`;
+
+      if (
+        typeof Notification !== "undefined" &&
+        Notification.permission === "granted"
+      ) {
+        try {
+          const n = new Notification(title, {
+            body,
+            icon: "/srb-logo-white.png",
+            tag: `task-${task.id}-${kind}`,
+            requireInteraction: true,
+          });
+          n.onclick = () => {
+            window.focus();
+            window.location.href = "/tasks";
+            n.close();
+          };
+        } catch {
+          // ignore
+        }
+      }
+
+      playBeep();
+      addFired(`task-${task.id}-${kind}`);
+
+      void (kind === "overdue"
+        ? markTaskOverdueReminderSentAction(task.id).catch(() => {})
+        : markTaskBeforeReminderSentAction(task.id).catch(() => {}));
+    },
+    [t]
+  );
+
   const fireShoot = useCallback(
     (s: UpcomingShoot, when: "day" | "hour") => {
       const minsAway = Math.max(
@@ -218,6 +283,32 @@ export function MeetingReminder() {
       // ignore
     }
 
+    // Tasks: due-soon (60m) + overdue-with-slack
+    try {
+      const res = await fetch("/api/tasks/upcoming", {
+        credentials: "same-origin",
+        cache: "no-store",
+      });
+      if (res.ok) {
+        const data = (await res.json()) as {
+          dueSoon: UpcomingTask[];
+          overdue: UpcomingTask[];
+        };
+        for (const tk of data.dueSoon) {
+          const key = `task-${tk.id}-due_soon`;
+          if (fired.has(key)) continue;
+          fireTask(tk, "due_soon");
+        }
+        for (const tk of data.overdue) {
+          const key = `task-${tk.id}-overdue`;
+          if (fired.has(key)) continue;
+          fireTask(tk, "overdue");
+        }
+      }
+    } catch {
+      // ignore
+    }
+
     // Shoots: 24h before + 1h before
     try {
       const res = await fetch("/api/shoots/upcoming", {
@@ -258,7 +349,7 @@ export function MeetingReminder() {
     } catch {
       // ignore
     }
-  }, [fire, fireShoot]);
+  }, [fire, fireShoot, fireTask]);
 
   useEffect(() => {
     // Ask for notification permission once (non-blocking).

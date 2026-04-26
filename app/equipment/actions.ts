@@ -3,10 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db/prisma";
 import { logAudit } from "@/lib/db/audit";
-import { requireManagerOrAdmin } from "@/lib/auth-guards";
+import { requireDeptLeadOrAbove } from "@/lib/auth-guards";
 
 export async function createEquipmentAction(formData: FormData) {
-  await requireManagerOrAdmin();
+  await requireDeptLeadOrAbove();
 
   const name = (formData.get("name") as string | null)?.trim();
   if (!name) return { ok: false, message: "الاسم مطلوب" };
@@ -47,7 +47,7 @@ export async function createEquipmentAction(formData: FormData) {
 }
 
 export async function updateEquipmentAction(id: string, formData: FormData) {
-  await requireManagerOrAdmin();
+  await requireDeptLeadOrAbove();
 
   const data: Record<string, unknown> = {};
   const stringFields = [
@@ -83,7 +83,7 @@ export async function updateEquipmentAction(id: string, formData: FormData) {
 }
 
 export async function deleteEquipmentAction(id: string) {
-  await requireManagerOrAdmin();
+  await requireDeptLeadOrAbove();
   const before = await prisma.equipment.findUnique({ where: { id } });
   await prisma.equipment.delete({ where: { id } });
   if (before) {
@@ -101,7 +101,7 @@ export async function checkOutEquipmentAction(
   holderId: string,
   expectedReturnAtRaw: string | null
 ) {
-  await requireManagerOrAdmin();
+  await requireDeptLeadOrAbove();
   await prisma.equipment.update({
     where: { id },
     data: {
@@ -117,7 +117,7 @@ export async function checkOutEquipmentAction(
 }
 
 export async function checkInEquipmentAction(id: string) {
-  await requireManagerOrAdmin();
+  await requireDeptLeadOrAbove();
   await prisma.equipment.update({
     where: { id },
     data: {
