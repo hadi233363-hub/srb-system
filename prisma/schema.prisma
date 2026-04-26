@@ -251,6 +251,22 @@ model Task {
   phaseId String?
   phase   ProjectPhase? @relation("TaskPhase", fields: [phaseId], references: [id], onDelete: SetNull)
 
+  // ------------------------------------------------------------------------
+  // Latest work-delivery snapshot — flat fields on the Task itself so the
+  // kanban / mobile UI can read the current submission without joining the
+  // history table. Updated each time the assignee submits work; cleared when
+  // the owner approves (status flips to done) or asks for changes.
+  // The full audit trail of every submission still lives in TaskSubmission.
+  // ------------------------------------------------------------------------
+  submissionUrl       String?
+  submissionFileUrl   String?
+  submissionFileName  String?
+  submissionFileType  String?
+  submissionNote      String?
+  submittedAt         DateTime?
+  reviewNote          String?   // owner's reason when requesting changes
+  reviewedAt          DateTime?
+
   comments      TaskComment[]
   updates       TaskUpdate[]
   collaborators TaskCollaborator[]

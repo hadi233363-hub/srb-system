@@ -81,6 +81,16 @@ export async function submitTaskWorkAction(taskId: string, formData: FormData) {
     where: { id: taskId },
     data: {
       status: "in_review",
+      // Mirror the latest submission onto the task row so any list view can
+      // render it without joining the history table.
+      submissionUrl: linkUrl,
+      submissionFileUrl: saved?.url ?? null,
+      submissionFileName: saved?.fileName ?? null,
+      submissionFileType: saved?.fileType ?? null,
+      submissionNote: note,
+      submittedAt: new Date(),
+      reviewNote: null,
+      reviewedAt: null,
       ...(task.startedAt ? {} : { startedAt: new Date() }),
     },
   });
@@ -174,6 +184,7 @@ export async function approveTaskSubmissionAction(taskId: string) {
       data: {
         status: "done",
         completedAt: now,
+        reviewedAt: now,
       },
     }),
     prisma.taskUpdate.create({
@@ -260,7 +271,11 @@ export async function requestTaskChangesAction(taskId: string, formData: FormDat
     }),
     prisma.task.update({
       where: { id: taskId },
-      data: { status: "in_progress" },
+      data: {
+        status: "in_progress",
+        reviewNote: reason,
+        reviewedAt: now,
+      },
     }),
     prisma.taskUpdate.create({
       data: {
