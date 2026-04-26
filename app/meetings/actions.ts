@@ -66,10 +66,12 @@ export async function createMeetingAction(formData: FormData) {
     },
   });
 
-  // Confirmation push to the owner — they know it's saved + scheduled.
-  // The 1-hour-before reminder is fired separately by the server scheduler
-  // (lib/reminders/scheduler.ts) so it works even when the page is closed.
-  if (ownerId !== user.id) {
+  // Confirmation push to the meeting owner — they know it's saved + scheduled
+  // and the push reaches their phone right away. The 1-hour-before reminder
+  // is fired separately by the server scheduler so it works even when the
+  // page is closed. We notify the owner ALWAYS (even if they're the creator)
+  // because the push delivery is the point — they need it on their phone.
+  if (ownerId) {
     const { createNotification } = await import("@/lib/db/notifications");
     await createNotification({
       recipientId: ownerId,

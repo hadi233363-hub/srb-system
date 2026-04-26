@@ -60,8 +60,10 @@ export async function createTaskAction(formData: FormData) {
   });
 
   // Drop a notification in the assignee's inbox so they know the moment a task
-  // is dropped on them. Skip if they assigned it to themselves.
-  if (assigneeId && assigneeId !== user.id) {
+  // is dropped on them. Always fire — even self-assignments — so the push
+  // reaches their phone (the desktop creator may not be looking at their
+  // phone at the moment, and that's the channel they actually need).
+  if (assigneeId) {
     await createNotification({
       recipientId: assigneeId,
       kind: "task.assigned",
@@ -180,12 +182,12 @@ export async function updateTaskAction(id: string, formData: FormData) {
     },
   });
 
-  // Notify the new assignee if it changed and isn't the same actor.
+  // Notify the new assignee whenever it changes — fires on self-assignment too
+  // so the phone gets the push. (Same reasoning as createTaskAction.)
   if (
     assigneeId !== null &&
     assigneeId &&
-    assigneeId !== task.assigneeId &&
-    assigneeId !== user.id
+    assigneeId !== task.assigneeId
   ) {
     await createNotification({
       recipientId: assigneeId,
