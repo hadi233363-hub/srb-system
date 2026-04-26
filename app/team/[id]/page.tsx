@@ -318,6 +318,11 @@ export default async function EmployeeDetailPage(props: {
             users={allUsers}
             projects={allProjects}
             allowProjectChange
+            viewer={
+              session?.user
+                ? { id: session.user.id, isOwner: isAdmin }
+                : undefined
+            }
           />
         )}
       </section>

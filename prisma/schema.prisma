@@ -42,6 +42,8 @@ model User {
   tasksAssigned      Task[]             @relation("TaskAssignee")
   tasksCreated       Task[]             @relation("TaskCreator")
   taskCollaborations TaskCollaborator[]
+  taskSubmissions    TaskSubmission[]   @relation("TaskSubmissionSubmitter")
+  taskReviews        TaskSubmission[]   @relation("TaskSubmissionReviewer")
   comments           TaskComment[]
   updates            TaskUpdate[]
   memberships        ProjectMember[]
@@ -54,6 +56,8 @@ model User {
   badgesAssigned     UserBadge[]        @relation("BadgeAssignedBy")
   notifications      Notification[]     @relation("NotificationRecipient")
   pushSubscriptions  PushSubscription[] @relation("PushSubscriptionUser")
+  phaseSubmissions   ProjectPhase[]     @relation("PhaseSubmitter")
+  phaseApprovals     ProjectPhase[]     @relation("PhaseApprover")
 
   @@index([active])
   @@index([role])
@@ -147,12 +151,57 @@ model Project {
   tasks        Task[]
   transactions Transaction[]
   shoots       PhotoShoot[]
+  phases       ProjectPhase[]
 
   @@index([status])
   @@index([clientId])
   @@index([leadId])
   @@index([deadlineAt])
   @@index([nextInvoiceDueAt])
+}
+
+// ---------------------------------------------------------------------------
+// Project phases — ordered milestones inside a project. Each phase locks the
+// next one until the owner approves its completion. Tasks may optionally
+// belong to a phase (the field is nullable, so existing tasks are untouched).
+// ---------------------------------------------------------------------------
+model ProjectPhase {
+  id          String   @id @default(cuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  order       Int      @default(0)
+  name        String
+  description String?
+  deadlineAt  DateTime?
+
+  // Lifecycle:
+  //   not_started → set on creation (except first phase, which starts active)
+  //   active      → currently the working phase
+  //   completed   → owner approved completion
+  //   locked      → blocked until the previous phase is approved
+  status      String   @default("locked")
+
+  // Phase delivery — proof submitted by the employee + review state.
+  proofLinkUrl   String?
+  proofFileUrl   String?
+  proofFileName  String?
+  proofFileType  String?
+  submittedAt    DateTime?
+  submittedById  String?
+  submittedBy    User?    @relation("PhaseSubmitter", fields: [submittedById], references: [id], onDelete: SetNull)
+
+  reviewNotes    String?
+  reviewedAt     DateTime?
+  approvedById   String?
+  approvedBy     User?    @relation("PhaseApprover", fields: [approvedById], references: [id], onDelete: SetNull)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tasks       Task[]   @relation("TaskPhase")
+
+  @@index([projectId, order])
+  @@index([projectId, status])
 }
 
 model ProjectMember {
@@ -196,9 +245,16 @@ model Task {
   reminderBeforeSentAt  DateTime?
   reminderOverdueSentAt DateTime?
 
+  // Optional phase membership — when set, this task counts toward the
+  // phase's progress bar and gates phase completion. Existing tasks remain
+  // unaffected because the field is optional.
+  phaseId String?
+  phase   ProjectPhase? @relation("TaskPhase", fields: [phaseId], references: [id], onDelete: SetNull)
+
   comments      TaskComment[]
   updates       TaskUpdate[]
   collaborators TaskCollaborator[]
+  submissions   TaskSubmission[]
 
   @@index([projectId])
   @@index([assigneeId])
@@ -206,6 +262,41 @@ model Task {
   @@index([status])
   @@index([dueAt])
   @@index([assigneeId, status])
+  @@index([phaseId])
+}
+
+// ---------------------------------------------------------------------------
+// Task work delivery — when an assignee submits work for review, we keep a
+// row per submission so the history (link, attached file, owner notes) is
+// preserved even after a "request changes" round-trip.
+// ---------------------------------------------------------------------------
+model TaskSubmission {
+  id          String   @id @default(cuid())
+  taskId      String
+  task        Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  submitterId String
+  submitter   User     @relation("TaskSubmissionSubmitter", fields: [submitterId], references: [id], onDelete: Cascade)
+
+  linkUrl     String?
+  fileUrl     String?
+  fileName    String?
+  fileType    String?
+  fileSize    Int?
+  note        String?
+
+  // pending | approved | changes_requested
+  status      String   @default("pending")
+
+  reviewerId  String?
+  reviewer    User?    @relation("TaskSubmissionReviewer", fields: [reviewerId], references: [id], onDelete: SetNull)
+  reviewNotes String?
+  reviewedAt  DateTime?
+
+  createdAt   DateTime @default(now())
+
+  @@index([taskId, createdAt])
+  @@index([submitterId])
+  @@index([status])
 }
 
 // Secondary assignees on a task — beyond the primary assignee.

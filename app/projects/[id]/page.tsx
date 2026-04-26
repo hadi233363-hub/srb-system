@@ -18,13 +18,14 @@ import {
   isOverdue,
 } from "@/lib/db/helpers";
 import { KanbanBoard } from "@/components/tasks/kanban-board";
-import { isDeptLeadOrAbove } from "@/lib/auth/roles";
+import { isDeptLeadOrAbove, isOwner } from "@/lib/auth/roles";
 import { NewTaskButton } from "@/components/tasks/new-task-button";
 import { ProjectMembersManager } from "./members-manager";
 import { ProjectActionsMenu } from "./project-actions-menu";
 import { getLocale } from "@/lib/i18n/server";
 import { translate } from "@/lib/i18n/dict";
 import { InvoiceBadge } from "@/components/projects/invoice-badge";
+import { ProjectPhases } from "@/components/projects/project-phases";
 
 export default async function ProjectDetailPage(props: {
   params: Promise<{ id: string }>;
@@ -33,6 +34,9 @@ export default async function ProjectDetailPage(props: {
   const [session, locale] = await Promise.all([auth(), getLocale()]);
   const t = (key: string) => translate(key, locale);
   const canManage = isDeptLeadOrAbove(session?.user.role);
+  const viewer = session?.user
+    ? { id: session.user.id, isOwner: isOwner(session.user.role) }
+    : undefined;
 
   const project = await prisma.project.findUnique({
     where: { id },
@@ -62,6 +66,23 @@ export default async function ProjectDetailPage(props: {
           },
         },
         orderBy: [{ priority: "desc" }, { dueAt: "asc" }],
+      },
+      phases: {
+        orderBy: { order: "asc" },
+        include: {
+          submittedBy: { select: { id: true, name: true } },
+          approvedBy: { select: { id: true, name: true } },
+          tasks: {
+            select: {
+              id: true,
+              title: true,
+              status: true,
+              dueAt: true,
+              assignee: { select: { id: true, name: true } },
+            },
+            orderBy: [{ status: "asc" }, { dueAt: "asc" }],
+          },
+        },
       },
     },
   });
@@ -258,6 +279,32 @@ export default async function ProjectDetailPage(props: {
         )}
       </section>
 
+      {/* Phases */}
+      <ProjectPhases
+        projectId={project.id}
+        canManage={canManage}
+        isOwner={isOwner(session?.user.role)}
+        viewerId={session?.user.id}
+        phases={project.phases.map((p) => ({
+          id: p.id,
+          order: p.order,
+          name: p.name,
+          description: p.description,
+          deadlineAt: p.deadlineAt,
+          status: p.status,
+          proofLinkUrl: p.proofLinkUrl,
+          proofFileUrl: p.proofFileUrl,
+          proofFileName: p.proofFileName,
+          proofFileType: p.proofFileType,
+          submittedAt: p.submittedAt,
+          submittedBy: p.submittedBy,
+          reviewNotes: p.reviewNotes,
+          reviewedAt: p.reviewedAt,
+          approvedBy: p.approvedBy,
+          tasks: p.tasks,
+        }))}
+      />
+
       {/* Tasks Kanban */}
       <section>
         <div className="mb-3 flex items-center justify-between">
@@ -290,6 +337,7 @@ export default async function ProjectDetailPage(props: {
               collaborators: t.collaborators,
             }))}
             users={allUsers.map((u) => ({ id: u.id, name: u.name, email: u.email }))}
+            viewer={viewer}
           />
         )}
       </section>

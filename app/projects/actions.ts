@@ -13,6 +13,11 @@ import {
   MAX_NAME_LEN,
   MAX_TITLE_LEN,
 } from "@/lib/input-limits";
+import {
+  findTemplate,
+  templatePhaseNames,
+  type Locale as TemplateLocale,
+} from "@/lib/projects/phase-templates";
 
 export async function createProjectAction(formData: FormData) {
   const user = await requireDeptLeadOrAbove();
@@ -79,6 +84,29 @@ export async function createProjectAction(formData: FormData) {
       nextInvoiceDueAt,
     },
   });
+
+  // If the user picked a starter phase template, seed the phases now.
+  const templateKey = (formData.get("phaseTemplate") as string | null) || null;
+  const localeRaw = (formData.get("locale") as string | null) || "ar";
+  const tplLocale: TemplateLocale = localeRaw === "en" ? "en" : "ar";
+  if (templateKey) {
+    const tpl = findTemplate(templateKey);
+    if (tpl) {
+      const names = templatePhaseNames(tpl, tplLocale);
+      await prisma.$transaction(
+        names.map((name, idx) =>
+          prisma.projectPhase.create({
+            data: {
+              projectId: project.id,
+              name,
+              order: idx + 1,
+              status: idx === 0 ? "active" : "locked",
+            },
+          })
+        )
+      );
+    }
+  }
 
   // Automatically add the lead as a project member.
   if (project.leadId) {

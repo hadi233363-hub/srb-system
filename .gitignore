@@ -53,6 +53,10 @@ app.db-*
 backups/
 *.db.pre-deploy-backup
 
+# User-uploaded delivery attachments (task / phase submissions). Live behind
+# /public/uploads at runtime — keep them out of git.
+/public/uploads/
+
 # vercel
 .vercel
 
