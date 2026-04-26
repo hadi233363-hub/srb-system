@@ -2,11 +2,16 @@
 // POST { title, description?, projectId?, requiredBadgeSlugs? }
 //   → { suggestions, inferredBadgeSlugs, filteredByBadge }
 //
-// Available to anyone who can create tasks (any active user).
+// Available to anyone who can create tasks (any active user). The response
+// strips sensitive fields (email, department, role) so a regular employee
+// using the suggestion picker doesn't end up with a full directory dump in
+// their browser's network tab. Manager+ surfaces continue to use the page-
+// level user list (already gated server-side) for the full profile data.
 
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { suggestAssignees } from "@/lib/tasks/suggest-assignees";
+import { isManagerOrAbove } from "@/lib/auth/roles";
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -48,6 +53,22 @@ export async function POST(req: Request) {
     requiredBadgeSlugs,
     limit: Math.min(Math.max(body.limit ?? 5, 1), 10),
   });
+
+  // Strip sensitive PII from the suggestion payload for non-manager callers.
+  // Managers / owners get the full record (they already have it elsewhere).
+  if (!isManagerOrAbove(session.user.role)) {
+    result.suggestions = result.suggestions.map((s) => ({
+      ...s,
+      user: {
+        id: s.user.id,
+        name: s.user.name,
+        email: "",
+        jobTitle: s.user.jobTitle,
+        department: null,
+        role: "employee",
+      },
+    }));
+  }
 
   return NextResponse.json(result);
 }

@@ -162,9 +162,22 @@ export async function deleteShootAction(id: string) {
   return { ok: true };
 }
 
-/** Idempotent — marks the 24h-before reminder as sent. */
+// Helper: only crew members (or manager+) can silence a shoot reminder.
+// Otherwise anyone with a shoot id could suppress alerts for the photographer.
+async function assertCrewOrManager(shootId: string, userId: string, userRole: string) {
+  const { isManagerOrAbove } = await import("@/lib/auth/roles");
+  if (isManagerOrAbove(userRole)) return true;
+  const crew = await prisma.photoShootCrew.findUnique({
+    where: { shootId_userId: { shootId, userId } },
+    select: { shootId: true },
+  });
+  return !!crew;
+}
+
+/** Idempotent — marks the 24h-before reminder as sent. Crew or manager+ only. */
 export async function markShootDayReminderSentAction(id: string) {
-  await requireAuth();
+  const user = await requireAuth();
+  if (!(await assertCrewOrManager(id, user.id, user.role))) return { ok: false };
   await prisma.photoShoot.updateMany({
     where: { id, reminderDayBeforeSentAt: null },
     data: { reminderDayBeforeSentAt: new Date() },
@@ -172,9 +185,10 @@ export async function markShootDayReminderSentAction(id: string) {
   return { ok: true };
 }
 
-/** Idempotent — marks the 1h-before reminder as sent. */
+/** Idempotent — marks the 1h-before reminder as sent. Crew or manager+ only. */
 export async function markShootHourReminderSentAction(id: string) {
-  await requireAuth();
+  const user = await requireAuth();
+  if (!(await assertCrewOrManager(id, user.id, user.role))) return { ok: false };
   await prisma.photoShoot.updateMany({
     where: { id, reminderHourBeforeSentAt: null },
     data: { reminderHourBeforeSentAt: new Date() },

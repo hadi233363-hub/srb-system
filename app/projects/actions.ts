@@ -4,10 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db/prisma";
 import { logAudit } from "@/lib/db/audit";
-import {
-  requireActiveUser as requireAuth,
-  requireDeptLeadOrAbove,
-} from "@/lib/auth-guards";
+import { requireDeptLeadOrAbove } from "@/lib/auth-guards";
 import {
   safeAmount,
   safeInt,
@@ -231,11 +228,15 @@ export async function removeMemberAction(projectId: string, userId: string) {
  * the project's monthly budget, advances nextInvoiceDueAt by one cycle, and
  * clears this cycle's reminder flags so the next cycle fires fresh alerts.
  *
+ * Permission: dept_lead+ only — recording invoices creates a financial
+ * transaction, which is gated to the same tier as createTransactionAction.
+ * (Previously this was open to any active user — a hole.)
+ *
  * Idempotent enough that a double-click in the UI won't double-record — the
  * button disables itself during the transition.
  */
 export async function recordInvoiceAction(projectId: string) {
-  const user = await requireAuth();
+  const user = await requireDeptLeadOrAbove();
   const project = await prisma.project.findUnique({ where: { id: projectId } });
   if (!project) return { ok: false, message: "المشروع غير موجود" };
   if (project.billingType !== "monthly") {
@@ -302,12 +303,17 @@ export async function recordInvoiceAction(projectId: string) {
 /**
  * Mark a per-cycle reminder as fired so polling tabs don't double-alert.
  * `which`: "before" = 3 days before · "due" = day of · "overdue" = follow-up.
+ *
+ * Permission: dept_lead+ — marking invoice reminders ties into the financial
+ * cycle (project budget visible on the project page), and we don't want
+ * employees silencing reminders for projects they have no business with.
+ * Owners/managers/dept_leads can mark; everyone else is rejected.
  */
 export async function markInvoiceReminderSentAction(
   projectId: string,
   which: "before" | "due" | "overdue"
 ) {
-  await requireAuth();
+  await requireDeptLeadOrAbove();
   const field =
     which === "before"
       ? "invoiceReminderBeforeSentAt"

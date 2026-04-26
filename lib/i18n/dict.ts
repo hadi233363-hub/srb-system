@@ -1201,6 +1201,48 @@ export const DICT: Record<string, { ar: string; en: string }> = {
     en: "Nothing flagged right now — keep going",
   },
 
+  // Web Push (mobile + desktop notifications when the tab is closed)
+  "push.on": { ar: "التنبيهات شغّالة", en: "Push on" },
+  "push.off": { ar: "فعّل التنبيهات", en: "Enable push" },
+  "push.enabling": { ar: "جاري التفعيل...", en: "Enabling..." },
+  "push.unsupported.label": { ar: "غير مدعوم", en: "Unsupported" },
+  "push.unsupported.desc": {
+    ar: "متصفّحك ما يدعم التنبيهات الفورية. جرّب Chrome أو Edge.",
+    en: "Your browser doesn't support push. Try Chrome or Edge.",
+  },
+  "push.iosHint.title": {
+    ar: "على iPhone لازم تثبّت الموقع كتطبيق أول",
+    en: "On iPhone you must install the app first",
+  },
+  "push.iosHint.step1": {
+    ar: "افتح الموقع في Safari",
+    en: "Open the site in Safari",
+  },
+  "push.iosHint.step2": {
+    ar: 'اضغط زر "مشاركة" → "إضافة للشاشة الرئيسية"',
+    en: 'Tap Share → "Add to Home Screen"',
+  },
+  "push.iosHint.step3": {
+    ar: "افتح SRB من أيقونة الشاشة الرئيسية وفعّل التنبيهات",
+    en: "Open SRB from the home-screen icon and enable push",
+  },
+  "push.error.permission": {
+    ar: "ما عطيتنا صلاحية التنبيهات. غيّرها من إعدادات المتصفح.",
+    en: "Notification permission denied. Change it in browser settings.",
+  },
+  "push.error.notConfigured": {
+    ar: "السيرفر مب مفعّل عليه التنبيهات الفورية بعد. كلّم الرئيس.",
+    en: "Push isn't configured on the server yet. Contact the owner.",
+  },
+  "push.error.serverReject": {
+    ar: "السيرفر رفض الاشتراك. جرّب لاحقاً.",
+    en: "Server rejected the subscription. Try again later.",
+  },
+  "push.error.generic": {
+    ar: "صار خطأ غير متوقع",
+    en: "Unexpected error",
+  },
+
   // Misc
   "brand.internal": { ar: "داخلي", en: "Internal" },
   "time.today": { ar: "اليوم", en: "Today" },

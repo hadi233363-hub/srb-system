@@ -1,0 +1,54 @@
+{
+  "name": "SRB — نظام الإدارة الداخلي",
+  "short_name": "SRB",
+  "description": "نظام الإدارة الداخلي لشركة SRB — مهام، اجتماعات، تصوير، ماليات",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#09090b",
+  "theme_color": "#09090b",
+  "lang": "ar",
+  "dir": "rtl",
+  "categories": ["business", "productivity"],
+  "icons": [
+    {
+      "src": "/srb-logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/srb-logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/srb-logo-white.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "المهام",
+      "short_name": "Tasks",
+      "url": "/tasks",
+      "icons": [{ "src": "/srb-logo.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "المشاريع",
+      "short_name": "Projects",
+      "url": "/projects",
+      "icons": [{ "src": "/srb-logo.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "الاجتماعات",
+      "short_name": "Meetings",
+      "url": "/meetings",
+      "icons": [{ "src": "/srb-logo.png", "sizes": "192x192" }]
+    }
+  ]
+}
