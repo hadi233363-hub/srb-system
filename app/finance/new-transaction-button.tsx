@@ -65,6 +65,7 @@ export function NewTransactionButton({ projects }: { projects: ProjectLite[] }) 
     { value: "bonus", label: t("txCategory.bonus") },
     { value: "tool", label: t("txCategory.tool") },
     { value: "ad", label: t("txCategory.ad") },
+    { value: "freelance", label: t("txCategory.freelance") },
     { value: "overhead", label: t("txCategory.overhead") },
     { value: "refund", label: t("txCategory.refund") },
     { value: "other", label: t("txCategory.other") },

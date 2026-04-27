@@ -65,6 +65,7 @@ export const TRANSACTION_CATEGORY_LABEL: Record<string, string> = {
   project_payment: "دفعة مشروع",
   salary: "راتب",
   bonus: "بونص",
+  freelance: "فري لانس",
   tool: "أدوات/اشتراكات",
   ad: "إعلانات",
   overhead: "مصاريف عامة",
