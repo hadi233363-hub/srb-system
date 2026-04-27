@@ -3,6 +3,7 @@ import type { CSSProperties } from "react";
 import { Cairo } from "next/font/google";
 import "./globals.css";
 import { Sidebar } from "@/components/sidebar";
+import { MobileBottomNav } from "@/components/mobile-bottom-nav";
 import { TopbarReal } from "@/components/topbar-real";
 import { PendingGate } from "@/components/pending-gate";
 import { MeetingReminder } from "@/components/meeting-reminder";
@@ -88,8 +89,18 @@ export default async function RootLayout({
                 />
                 <div className="flex min-w-0 flex-1 flex-col">
                   <TopbarReal />
-                  <main className="flex-1 overflow-auto p-4 md:p-6">{children}</main>
+                  {/*
+                    Bottom-nav clearance: pad the main scrolling area so the
+                    last item isn't trapped under the 64px bottom-nav on
+                    mobile. md: removes the padding once the sidebar takes
+                    over.
+                  */}
+                  <main className="flex-1 overflow-auto p-4 pb-24 md:p-6 md:pb-6">
+                    {children}
+                  </main>
                 </div>
+                {/* Mobile bottom nav — visible <md only. */}
+                <MobileBottomNav role={user.role} />
                 {/* Background reminder pollers — fire desktop notifications. */}
                 <MeetingReminder />
                 <InvoiceReminder />

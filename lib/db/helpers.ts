@@ -1,8 +1,10 @@
 // Shared helpers for Arabic labels + formatters used across pages.
 
 export const ROLE_LABEL: Record<string, string> = {
-  admin: "مدير",
-  manager: "رئيس قسم",
+  admin: "الرئيس",
+  manager: "المدير",
+  head: "رئيس جميع الأقسام",
+  department_lead: "رئيس قسم",
   employee: "موظف",
 };
 

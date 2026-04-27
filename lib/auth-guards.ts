@@ -12,10 +12,17 @@
 import { auth } from "@/auth";
 import {
   isDeptLeadOrAbove,
+  isHeadOrAbove,
   isManagerOrAbove,
   isOwner,
   type Role,
 } from "@/lib/auth/roles";
+import {
+  hasPermission as checkPermission,
+  type Action,
+  type Module,
+} from "@/lib/auth/permissions";
+import { getUserOverrides } from "@/lib/db/permissions";
 
 interface ActiveUser {
   id: string;
@@ -56,10 +63,41 @@ export async function requireManagerOrAbove(): Promise<ActiveUser> {
   return user;
 }
 
+/** Head of all departments or above — cross-dept ops scope. */
+export async function requireHeadOrAbove(): Promise<ActiveUser> {
+  const user = await requireActiveUser();
+  if (!isHeadOrAbove(user.role)) {
+    throw new Error("صلاحيات غير كافية");
+  }
+  return user;
+}
+
 /** Department lead or above — adds projects / transactions / meetings / shoots. */
 export async function requireDeptLeadOrAbove(): Promise<ActiveUser> {
   const user = await requireActiveUser();
   if (!isDeptLeadOrAbove(user.role)) {
+    throw new Error("صلاحيات غير كافية");
+  }
+  return user;
+}
+
+/**
+ * Permission-based guard. Resolves the user's effective permission for
+ * (module, action) — Owner short-circuits to true, otherwise we consult
+ * any overrides on top of the role default. Throws if denied.
+ *
+ * Use this at the entry of any sensitive server action where the gate is
+ * fine-grained (e.g. "approve a submission"). Role-tier guards above remain
+ * appropriate for coarse gates ("only managers can approve users").
+ */
+export async function requirePermission(
+  module: Module,
+  action: Action
+): Promise<ActiveUser> {
+  const user = await requireActiveUser();
+  if (user.role === "admin") return user;
+  const overrides = await getUserOverrides(user.id);
+  if (!checkPermission(user, module, action, overrides)) {
     throw new Error("صلاحيات غير كافية");
   }
   return user;

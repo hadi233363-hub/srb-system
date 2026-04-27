@@ -22,10 +22,11 @@ export const DICT: Record<string, { ar: string; en: string }> = {
   "nav.admin_users": { ar: "إدارة الحسابات", en: "User management" },
 
   // Roles — labels reflect the 4-tier hierarchy: الرئيس (admin/owner) →
-  // المدير (manager) → رئيس قسم (department_lead) → موظف (employee).
-  // The DB role value `admin` represents the owner / president tier.
+  // المدير (manager) → رئيس جميع الأقسام (head) → رئيس قسم (department_lead)
+  // → موظف (employee). DB role value `admin` represents the owner tier.
   "role.admin": { ar: "الرئيس", en: "President" },
   "role.manager": { ar: "المدير", en: "Manager" },
+  "role.head": { ar: "رئيس جميع الأقسام", en: "Head of all departments" },
   "role.department_lead": { ar: "رئيس قسم", en: "Department Head" },
   "role.employee": { ar: "موظف", en: "Employee" },
 
@@ -700,6 +701,13 @@ export const DICT: Record<string, { ar: string; en: string }> = {
     en: "Change system colors and logo — preview updates live",
   },
   "nav.admin_theme": { ar: "الألوان", en: "Theme" },
+  "nav.admin_permissions": { ar: "الصلاحيات", en: "Permissions" },
+
+  // Mobile bottom-nav labels (kept short to fit under the icon at 320px wide).
+  "bottomNav.myTasks": { ar: "مهامي", en: "My tasks" },
+  "bottomNav.mySchedule": { ar: "جدولي", en: "My schedule" },
+  "bottomNav.notifications": { ar: "إشعاراتي", en: "Inbox" },
+  "bottomNav.more": { ar: "المزيد", en: "More" },
   "theme.field.brand": { ar: "اللون الأساسي (Brand)", en: "Brand color" },
   "theme.field.accent": { ar: "لون التمييز (Accent)", en: "Accent color" },
   "theme.field.logo": { ar: "اللوقو", en: "Logo" },

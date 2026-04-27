@@ -52,3 +52,38 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: #3f3f46;
 }
+
+/* ---------------------------------------------------------------------------
+ * Mobile-first polish — kept in globals.css instead of Tailwind utility soup
+ * so it applies everywhere (including third-party widgets like the kanban
+ * board). Goals:
+ *  1. No horizontal scroll surprise on phones.
+ *  2. iOS doesn't auto-zoom inputs (font-size <16px triggers zoom).
+ *  3. Tap targets meet the 44px iOS / 48px Android minimum.
+ * ------------------------------------------------------------------------- */
+
+html,
+body {
+  /* Stop the page from going wider than the viewport when a child uses
+     long-running content (a code block, a wide table, etc.). Children that
+     genuinely need to scroll should scope it to themselves with overflow-x. */
+  overflow-x: hidden;
+}
+
+@media (max-width: 768px) {
+  /* iOS Safari zooms when an input <16px is focused. Force a 16px floor on
+     mobile so the page doesn't reflow under the keyboard. */
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+
+  /* Tap-friendly minimum height for buttons and links inside main content
+     areas. We exclude the bottom nav and sidebar (they manage their own size). */
+  main button,
+  main a[role="button"],
+  main label[role="button"] {
+    min-height: 44px;
+  }
+}
