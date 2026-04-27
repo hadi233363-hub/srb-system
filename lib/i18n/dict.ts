@@ -395,10 +395,11 @@ export const DICT: Record<string, { ar: string; en: string }> = {
   "risk.healthy.detailPrefix": { ar: "صافي ربح", en: "Net profit of" },
   "risk.healthy.detailMargin": { ar: "بهامش", en: "at a margin of" },
 
-  // Roles
-  "role.labelAdmin": { ar: "مدير", en: "Admin" },
-  "role.labelManager": { ar: "رئيس قسم", en: "Manager" },
-  "role.labelEmployee": { ar: "موظف", en: "Employee" },
+  // Legacy role-label keys — kept for any old caller still referencing them.
+  // Source of truth is now `role.<roleKey>` directly (e.g. role.department_lead).
+  "role.labelAdmin": { ar: "الرئيس", en: "President" },
+  "role.labelManager": { ar: "المدير", en: "Manager" },
+  "role.labelEmployee": { ar: "الموظف", en: "Employee" },
 
   // Project status
   "projectStatus.active": { ar: "نشط", en: "Active" },
@@ -1108,11 +1109,11 @@ export const DICT: Record<string, { ar: string; en: string }> = {
     en: "Manager — runs ops & approves employees",
   },
   "admin.users.roleOptDeptLead": {
-    ar: "رئيس قسم — يدير مشاريع ومصاريف قسمه",
-    en: "Dept Head — manages their dept projects & expenses",
+    ar: "رئيس الفريق — يدير مشاريع ومصاريف فريقه",
+    en: "Team lead — manages their team's projects & expenses",
   },
   "admin.users.roleOptEmployee": {
-    ar: "موظف — مهامه فقط",
+    ar: "الموظف — مهامه فقط",
     en: "Employee — own tasks only",
   },
   "admin.users.lockedHigherRank": {
@@ -1173,8 +1174,8 @@ export const DICT: Record<string, { ar: string; en: string }> = {
 
   // Finance — locked tier (employees / non-recorders)
   "finance.locked.desc": {
-    ar: "صفحة المالية مقيّدة على رئيس قسم وفوق",
-    en: "Finance is restricted to dept head and above",
+    ar: "صفحة المالية مقيّدة على رئيس الفريق وفوق",
+    en: "Finance is restricted to team lead and above",
   },
   "finance.locked.body": {
     ar: "كلّم المدير لو محتاج تسجّل أي حركة مالية",
