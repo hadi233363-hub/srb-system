@@ -29,6 +29,10 @@ export interface SubmissionLite {
   fileSize: number | null;
   note: string | null;
   status: string;
+  // Revision number — 1 for the first submission on a task, increments
+  // whenever the assignee re-submits after "request changes". Falls back to
+  // a derived index if older rows didn't have the column populated.
+  revisionNumber?: number | null;
   reviewNotes: string | null;
   reviewedAt: Date | string | null;
   createdAt: Date | string;
@@ -557,23 +561,44 @@ export function TaskSubmissionSection({
             {t("submission.history")} · {submissions.length}
           </summary>
           <ul className="mt-2 space-y-1">
-            {submissions.slice(0, 10).map((s) => (
-              <li
-                key={s.id}
-                className="flex items-center justify-between gap-2 rounded-md border border-zinc-800 bg-zinc-950/40 px-2 py-1"
-              >
-                <span className="flex items-center gap-1">
-                  <Clock className="h-3 w-3 text-zinc-500" />
-                  {new Date(s.createdAt).toLocaleString("en", {
-                    dateStyle: "short",
-                    timeStyle: "short",
-                  })}
-                </span>
-                <span className="text-zinc-500">
-                  {t(`submission.status.${s.status}`)}
-                </span>
-              </li>
-            ))}
+            {submissions.slice(0, 10).map((s, idx) => {
+              // Display revision label. When the column is null (legacy rows
+              // saved before this migration), derive it from order: oldest
+              // submission = Revision 1, etc. The list is descending so the
+              // last item is the oldest.
+              const totalCount = submissions.length;
+              const fallbackRev = totalCount - idx;
+              const rev = s.revisionNumber ?? fallbackRev;
+              const isFinal = totalCount > 1 && idx === 0 && s.status === "approved";
+              return (
+                <li
+                  key={s.id}
+                  className="flex items-center justify-between gap-2 rounded-md border border-zinc-800 bg-zinc-950/40 px-2 py-1"
+                >
+                  <span className="flex items-center gap-2">
+                    <span
+                      className={cn(
+                        "rounded-full px-1.5 py-0.5 text-[10px] font-bold tabular-nums",
+                        isFinal
+                          ? "bg-emerald-500/15 text-emerald-300"
+                          : "bg-zinc-800/80 text-zinc-300"
+                      )}
+                      title={`Revision ${rev}`}
+                    >
+                      {isFinal ? "FINAL" : `R${rev}`}
+                    </span>
+                    <Clock className="h-3 w-3 text-zinc-500" />
+                    {new Date(s.createdAt).toLocaleString("en", {
+                      dateStyle: "short",
+                      timeStyle: "short",
+                    })}
+                  </span>
+                  <span className="text-zinc-500">
+                    {t(`submission.status.${s.status}`)}
+                  </span>
+                </li>
+              );
+            })}
           </ul>
         </details>
       )}

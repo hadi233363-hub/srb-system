@@ -16,8 +16,10 @@ import { getLocale } from "@/lib/i18n/server";
 import { translate, type Locale } from "@/lib/i18n/dict";
 import { BackupHealthWidget } from "@/components/backup-health-widget";
 import { SmartInsightsPanel } from "@/components/smart-insights";
+import { CreativeCommandCenter } from "@/components/creative-command-center";
 import {
   isDeptLeadOrAbove,
+  isHeadOrAbove,
   isManagerOrAbove,
   isOwner,
 } from "@/lib/auth/roles";
@@ -77,6 +79,123 @@ export default async function OverviewPage() {
   const expenses = last30dExpense._sum.amountQar ?? 0;
   const net = revenue - expenses;
   const isEmpty = activeProjects === 0 && allTasks === 0 && teamSize <= 1;
+
+  // ---------------------------------------------------------------------
+  // Creative Command Center data — only for head+ roles. Owner / manager /
+  // head share the same view; lower tiers don't see this panel because
+  // the data spans every department.
+  // ---------------------------------------------------------------------
+  const showCommandCenter = isHeadOrAbove(role);
+  const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+  const [
+    urgentTaskRows,
+    overdueTaskRows,
+    upcomingShootRows,
+    atRiskProjectRows,
+  ] = showCommandCenter
+    ? await Promise.all([
+        prisma.task.findMany({
+          where: {
+            priority: "urgent",
+            status: { in: ["todo", "in_progress", "in_review"] },
+          },
+          orderBy: [{ dueAt: "asc" }, { createdAt: "desc" }],
+          take: 8,
+          select: {
+            id: true,
+            title: true,
+            dueAt: true,
+            assignee: { select: { id: true, name: true } },
+            project: { select: { id: true, title: true } },
+          },
+        }),
+        prisma.task.findMany({
+          where: {
+            status: { in: ["todo", "in_progress", "in_review"] },
+            dueAt: { lt: now },
+          },
+          orderBy: { dueAt: "asc" },
+          take: 8,
+          select: {
+            id: true,
+            title: true,
+            dueAt: true,
+            assignee: { select: { id: true, name: true } },
+            project: { select: { id: true, title: true } },
+          },
+        }),
+        prisma.photoShoot.findMany({
+          where: {
+            status: "scheduled",
+            shootDate: { gte: now, lte: sevenDaysFromNow },
+          },
+          orderBy: { shootDate: "asc" },
+          take: 8,
+          select: {
+            id: true,
+            title: true,
+            shootDate: true,
+            location: true,
+            status: true,
+          },
+        }),
+        prisma.project.findMany({
+          where: {
+            status: "active",
+            OR: [
+              // Deadline within a week
+              { deadlineAt: { gte: now, lte: sevenDaysFromNow } },
+              // Deadline already passed but project still active
+              { deadlineAt: { lt: now } },
+            ],
+          },
+          orderBy: { deadlineAt: "asc" },
+          take: 8,
+          select: {
+            id: true,
+            title: true,
+            deadlineAt: true,
+            tasks: {
+              where: {
+                status: { in: ["todo", "in_progress", "in_review"] },
+              },
+              select: { id: true, dueAt: true },
+            },
+            brief: { select: { approvalStage: true } },
+          },
+        }),
+      ])
+    : [[], [], [], []];
+
+  const overdueTasksWithDuration = overdueTaskRows.map((t) => ({
+    id: t.id,
+    title: t.title,
+    dueAt: t.dueAt,
+    assignee: t.assignee,
+    project: t.project,
+    hoursOverdue: t.dueAt
+      ? Math.max(0, (now.getTime() - t.dueAt.getTime()) / (60 * 60 * 1000))
+      : 0,
+  }));
+
+  const atRiskWithCounts = atRiskProjectRows.map((p) => {
+    const overdueTasks = p.tasks.filter(
+      (t) => t.dueAt && t.dueAt.getTime() < now.getTime()
+    ).length;
+    const days = p.deadlineAt
+      ? Math.ceil((p.deadlineAt.getTime() - now.getTime()) / (24 * 60 * 60 * 1000))
+      : 0;
+    return {
+      id: p.id,
+      title: p.title,
+      deadlineAt: p.deadlineAt,
+      daysToDeadline: days,
+      openTasks: p.tasks.length,
+      overdueTasks,
+      briefStage: p.brief?.approvalStage ?? "draft",
+    };
+  });
 
   return (
     <div className="space-y-6">
@@ -145,6 +264,19 @@ export default async function OverviewPage() {
           (financial signals only show for owner). Computed server-side from
           live DB scans. */}
       <SmartInsightsPanel userRole={role} locale={locale} />
+
+      {/* Creative Command Center — head+ only. Cross-department snapshot of
+          the four risk vectors: urgent / overdue / upcoming shoots / at-risk
+          projects. Hides itself when there's nothing to show. */}
+      {showCommandCenter && (
+        <CreativeCommandCenter
+          urgentTasks={urgentTaskRows}
+          overdueTasks={overdueTasksWithDuration}
+          upcomingShoots={upcomingShootRows}
+          atRiskProjects={atRiskWithCounts}
+          locale={locale}
+        />
+      )}
 
       {isAdmin && <BackupHealthWidget locale={locale} />}
 

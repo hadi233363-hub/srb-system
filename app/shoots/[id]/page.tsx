@@ -217,6 +217,17 @@ export default async function ShootDetailPage(props: {
               <Download className="h-3.5 w-3.5" />
               {t("shoots.addToCalendar")}
             </a>
+            {/* Generate a print-friendly call sheet — opens in a new tab so the
+                user can hit Cmd/Ctrl+P and save as PDF or print straight to
+                paper for the crew. */}
+            <Link
+              href={`/shoots/${shoot.id}/call-sheet`}
+              target="_blank"
+              className="flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-3 py-1.5 text-xs text-emerald-300 hover:border-emerald-400/50"
+            >
+              <FileText className="h-3.5 w-3.5" />
+              {locale === "ar" ? "كول شيت" : "Call sheet"}
+            </Link>
             {canManage && (
               <ShootActions
                 shoot={{

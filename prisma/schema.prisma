@@ -66,9 +66,47 @@ model User {
   phaseApprovals     ProjectPhase[]     @relation("PhaseApprover")
   permissionOverrides PermissionOverride[] @relation("PermissionOverrideUser")
   permissionGrants    PermissionOverride[] @relation("PermissionOverrideGrantedBy")
+  briefApprovals     ProjectBrief[]     @relation("BriefApprover")
 
   @@index([active])
   @@index([role])
+}
+
+// ---------------------------------------------------------------------------
+// Creative brief — one record per project. Captures everything the creative
+// team needs upfront so a designer / shooter / editor doesn't have to chase
+// the account manager for context.
+//
+// Approval lifecycle: draft → pending_review → approved. Anyone with brief:edit
+// can author / update; only brief:approve can flip to approved (which locks it
+// from further edits unless the approver re-opens it).
+// ---------------------------------------------------------------------------
+model ProjectBrief {
+  id              String   @id @default(cuid())
+  projectId       String   @unique
+  project         Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  // The classic creative-brief fields. All optional so a partial brief is
+  // still saveable and the team can fill in pieces as they're discovered.
+  objective       String?  // الهدف من الحملة / المشروع
+  targetAudience  String?  // الفئة المستهدفة
+  styleNotes      String?  // الستايل والمزاج
+  refs            String?  // روابط ومراجع (newline-separated)
+  deliverables    String?  // المخرجات النهائية
+  platforms       String?  // المنصات (Instagram, TikTok, ...)
+  sizes           String?  // المقاسات والأبعاد
+  notes           String?  // ملاحظات إضافية
+
+  // Lifecycle
+  approvalStage   String   @default("draft") // draft | pending_review | approved
+  approvedById    String?
+  approvedBy      User?    @relation("BriefApprover", fields: [approvedById], references: [id], onDelete: SetNull)
+  approvedAt      DateTime?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([approvalStage])
 }
 
 // ---------------------------------------------------------------------------
@@ -188,6 +226,7 @@ model Project {
   transactions Transaction[]
   shoots       PhotoShoot[]
   phases       ProjectPhase[]
+  brief        ProjectBrief?
 
   @@index([status])
   @@index([clientId])
@@ -338,6 +377,11 @@ model TaskSubmission {
 
   // pending | approved | changes_requested
   status      String   @default("pending")
+
+  // Revision number — 1 for the first submission on a task, increments by
+  // 1 each time the assignee re-submits after a "request changes" round.
+  // Computed at insert time by counting prior submissions on the same task.
+  revisionNumber Int     @default(1)
 
   reviewerId  String?
   reviewer    User?    @relation("TaskSubmissionReviewer", fields: [reviewerId], references: [id], onDelete: SetNull)
