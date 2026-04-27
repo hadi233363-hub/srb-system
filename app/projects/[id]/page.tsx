@@ -28,6 +28,9 @@ import { InvoiceBadge } from "@/components/projects/invoice-badge";
 import { ProjectPhases } from "@/components/projects/project-phases";
 import { CreativeBrief } from "@/components/projects/creative-brief";
 import { ProjectProfit } from "@/components/projects/project-profit";
+import { PackageTracker } from "@/components/projects/package-tracker";
+import { ProjectAssets } from "@/components/projects/project-assets";
+import { ClientDeliveries } from "@/components/projects/client-deliveries";
 import { hasPermission } from "@/lib/auth/permissions";
 import { getUserOverrides } from "@/lib/db/permissions";
 
@@ -93,6 +96,19 @@ export default async function ProjectDetailPage(props: {
           approvedBy: { select: { id: true, name: true } },
         },
       },
+      package: true,
+      assets: {
+        include: {
+          addedBy: { select: { id: true, name: true } },
+        },
+        orderBy: { createdAt: "desc" },
+      },
+      deliveries: {
+        include: {
+          createdBy: { select: { id: true, name: true } },
+        },
+        orderBy: { createdAt: "desc" },
+      },
     },
   });
 
@@ -141,6 +157,30 @@ export default async function ProjectDetailPage(props: {
   const canApproveBrief =
     !!sessionUser &&
     hasPermission(sessionUser, "brief", "approve", userOverrides);
+
+  const canEditPackage =
+    !!sessionUser &&
+    hasPermission(sessionUser, "package", "edit", userOverrides);
+
+  const canCreateAsset =
+    !!sessionUser &&
+    hasPermission(sessionUser, "assets", "create", userOverrides);
+  const canDeleteAsset =
+    !!sessionUser &&
+    hasPermission(sessionUser, "assets", "delete", userOverrides);
+
+  const canCreateDelivery =
+    !!sessionUser &&
+    hasPermission(sessionUser, "clientDelivery", "create", userOverrides);
+  const canEditDelivery =
+    !!sessionUser &&
+    hasPermission(sessionUser, "clientDelivery", "edit", userOverrides);
+  const canApproveDelivery =
+    !!sessionUser &&
+    hasPermission(sessionUser, "clientDelivery", "approve", userOverrides);
+  const canDeleteDelivery =
+    !!sessionUser &&
+    hasPermission(sessionUser, "clientDelivery", "delete", userOverrides);
 
   // Owner-only profit numbers — aggregate the project's transactions.
   const ownerView = isOwner(session?.user.role);
@@ -303,6 +343,36 @@ export default async function ProjectDetailPage(props: {
         brief={project.brief}
         canEdit={canEditBrief}
         canApprove={canApproveBrief}
+        locale={locale}
+      />
+
+      {/* Package tracker — promised vs delivered counters per content type. */}
+      <PackageTracker
+        projectId={project.id}
+        pkg={project.package}
+        canEdit={canEditPackage}
+        locale={locale}
+      />
+
+      {/* Moodboard / asset library — filterable grid of references and
+          uploaded assets. */}
+      <ProjectAssets
+        projectId={project.id}
+        assets={project.assets}
+        canCreate={canCreateAsset}
+        canDelete={canDeleteAsset}
+        locale={locale}
+      />
+
+      {/* Client delivery tracking — internal log of what was sent, when the
+          client viewed / requested changes / approved. */}
+      <ClientDeliveries
+        projectId={project.id}
+        deliveries={project.deliveries}
+        canCreate={canCreateDelivery}
+        canEdit={canEditDelivery}
+        canApprove={canApproveDelivery}
+        canDelete={canDeleteDelivery}
         locale={locale}
       />
 
