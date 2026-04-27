@@ -290,71 +290,7 @@ const MANAGER_PERMS: PermissionSet = new Set<Permission>([
   p("admin", "approve"),
 ]);
 
-// Head of all departments (رئيس جميع الأقسام) — cross-dept visibility on
-// the operational surface. Can edit, reassign, cancel and review across
-// departments, but is not a manager: cannot approve users, cannot record
-// transactions, cannot reach system settings, cannot see finance totals.
-const HEAD_PERMS: PermissionSet = new Set<Permission>([
-  // Projects — full visibility across all departments
-  p("projects", "view"),
-  p("projects", "create"),
-  p("projects", "edit"),
-  p("projects", "delete"),
-  p("projects", "assign"),
-  p("projects", "manage"),
-  // Tasks — full ops control
-  p("tasks", "view"),
-  p("tasks", "create"),
-  p("tasks", "edit"),
-  p("tasks", "delete"),
-  p("tasks", "assign"),
-  p("tasks", "approve"),
-  // Submissions — review across all departments
-  p("submissions", "view"),
-  p("submissions", "approve"),
-  p("submissions", "edit"),
-  // Brief
-  p("brief", "view"),
-  p("brief", "create"),
-  p("brief", "edit"),
-  p("brief", "approve"),
-  // Package
-  p("package", "view"),
-  p("package", "edit"),
-  // Assets
-  p("assets", "view"),
-  p("assets", "create"),
-  p("assets", "edit"),
-  p("assets", "delete"),
-  // Client delivery
-  p("clientDelivery", "view"),
-  p("clientDelivery", "create"),
-  p("clientDelivery", "edit"),
-  p("clientDelivery", "delete"),
-  p("clientDelivery", "approve"),
-  // Freelancers — head sees + manages but doesn't move money (approve gate).
-  p("freelancers", "view"),
-  p("freelancers", "create"),
-  p("freelancers", "edit"),
-  // Shoots
-  p("shoots", "view"),
-  p("shoots", "create"),
-  p("shoots", "edit"),
-  p("shoots", "delete"),
-  p("shoots", "manage"),
-  // Meetings
-  p("meetings", "view"),
-  p("meetings", "create"),
-  p("meetings", "edit"),
-  p("meetings", "delete"),
-  // Equipment
-  p("equipment", "view"),
-  p("equipment", "edit"),
-  // Team — read across all departments, but not manage
-  p("team", "view"),
-]);
-
-// Department lead (رئيس قسم) — manages their own department.
+// Team lead (رئيس الفريق) — manages their team's pipeline.
 const DEPT_LEAD_PERMS: PermissionSet = new Set<Permission>([
   p("projects", "view"),
   p("projects", "create"),
@@ -416,7 +352,6 @@ const EMPLOYEE_PERMS: PermissionSet = new Set<Permission>([
 const ROLE_DEFAULTS: Record<Role, PermissionSet> = {
   admin: OWNER_PERMS,
   manager: MANAGER_PERMS,
-  head: HEAD_PERMS,
   department_lead: DEPT_LEAD_PERMS,
   employee: EMPLOYEE_PERMS,
 };

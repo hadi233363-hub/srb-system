@@ -3,65 +3,47 @@
 // goes through these helpers — no raw `role === "admin"` checks anywhere else.
 //
 // Hierarchy (highest → lowest):
-//   admin           → الرئيس (President / Owner)
-//                     · sees full finance dashboard (totals, P&L, profit, risk)
-//                     · approves any role including new owners
-//                     · root access to /admin/* (audit, backup, theme,
-//                       PERMISSION CONTROL PANEL)
-//                     · only one normally exists, but multiple are supported
+//   admin           → الرئيس (Owner)
+//                     · full access to everything, including finance totals
+//                     · only one with permission-control-panel access
 //
-//   manager         → المدير (Admin)
-//                     · approves pending users + assigns roles up to dept_lead
-//                     · runs all ops (projects, meetings, shoots, equipment)
-//                     · creates transactions (income / expense / salary) but
-//                       CANNOT see the aggregated finance dashboard — that's
-//                       president-only
-//                     · cannot promote anyone to admin/owner
+//   manager         → المدير
+//                     · runs ops (projects, meetings, shoots, equipment)
+//                     · approves users + assigns roles up to team lead
+//                     · cannot see finance totals (owner-only)
 //
-//   head            → رئيس جميع الأقسام (Head of All Departments)
-//                     · cross-department visibility: every project, every task,
-//                       every submission, across all departments
-//                     · can edit / reassign / cancel any task, review any
-//                       submission, but is NOT a manager — cannot approve
-//                       users, cannot promote/demote anyone
-//                     · CANNOT see finance totals (owner-only) and cannot
-//                       reach system settings (audit / backup / theme /
-//                       permissions)
-//
-//   department_lead → رئيس قسم (Department Head)
-//                     · manages a single department's projects + transactions
-//                     · adds meetings & shoots in their dept
+//   department_lead → رئيس الفريق (Team lead)
+//                     · manages their team's projects + tasks + freelancers
 //                     · cannot approve users, cannot change roles
 //                     · cannot see finance totals
 //
-//   employee        → موظف
-//                     · works on their own tasks
-//                     · sees team list, projects they're a member of
+//   employee        → الموظف
+//                     · works on their own tasks, sees the team list
 //                     · cannot create projects, transactions, meetings, shoots
+//
+// Historical note: an extra "head of all departments" tier (`head`) lived
+// briefly between `manager` and `department_lead`. It was merged back into
+// `department_lead` for simplicity — the team-lead label now covers the
+// cross-team coordination role. `instrumentation.ts` runs a one-shot
+// migration on boot to convert any leftover `role='head'` rows to `manager`.
 
 export type Role =
   | "admin"
   | "manager"
-  | "head"
   | "department_lead"
   | "employee";
 
 export const ALL_ROLES: readonly Role[] = [
   "admin",
   "manager",
-  "head",
   "department_lead",
   "employee",
 ] as const;
 
 // Numeric rank — higher number = more privileged. Used for `meets()` checks.
-// `head` sits between `manager` and `department_lead`: it has cross-department
-// scope (so it must outrank dept_lead) but no people-management or finance
-// power (so it must rank below manager).
 const RANK: Record<Role, number> = {
-  admin: 5,
-  manager: 4,
-  head: 3,
+  admin: 4,
+  manager: 3,
   department_lead: 2,
   employee: 1,
 };
@@ -82,17 +64,20 @@ export function isManagerOrAbove(role: string | undefined | null): boolean {
   return meets(role, "manager");
 }
 
-/**
- * Head-of-all-departments tier or above. Used for cross-department visibility
- * gates (see all projects/tasks regardless of which department owns them).
- * Owner and manager naturally inherit this scope.
- */
-export function isHeadOrAbove(role: string | undefined | null): boolean {
-  return meets(role, "head");
-}
-
 export function isDeptLeadOrAbove(role: string | undefined | null): boolean {
   return meets(role, "department_lead");
+}
+
+/**
+ * Backwards-compat alias for the deprecated `head` tier. We treat any caller
+ * that asks "is this a head?" as "is this manager or above?" so old call
+ * sites keep working while we migrate them. Once every caller is gone this
+ * can be removed.
+ *
+ * @deprecated Use `isManagerOrAbove` instead.
+ */
+export function isHeadOrAbove(role: string | undefined | null): boolean {
+  return isManagerOrAbove(role);
 }
 
 /** Validate that a string from a form / API is a known role. */
@@ -102,15 +87,14 @@ export function isValidRole(value: unknown): value is Role {
 
 /**
  * Roles that `assigner` is allowed to grant. Owners can grant any role.
- * Managers can grant up to `head` (cross-dept visibility role) — they can
- * elevate someone into operations leadership but not into another manager
- * or owner seat. Anyone else can grant nothing.
+ * Managers can grant team_lead and below — they can promote into team
+ * leadership but not into another manager or owner seat.
  */
 export function assignableRoles(assignerRole: string | undefined | null): Role[] {
   if (isOwner(assignerRole))
-    return ["admin", "manager", "head", "department_lead", "employee"];
+    return ["admin", "manager", "department_lead", "employee"];
   if (isManagerOrAbove(assignerRole))
-    return ["head", "department_lead", "employee"];
+    return ["department_lead", "employee"];
   return [];
 }
 

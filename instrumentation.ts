@@ -25,6 +25,27 @@ export async function register() {
     console.error("[instrumentation] ensureDefaultBadges failed:", err);
   }
 
+  // One-shot data migration — the deprecated `head` (رئيس جميع الأقسام)
+  // role was removed in favour of a flat 4-tier hierarchy (admin / manager
+  // / department_lead / employee). Any account still flagged as `head` is
+  // promoted to `manager` so it keeps working with no manual intervention.
+  // Idempotent: the WHERE clause matches zero rows once the migration has
+  // run, so subsequent boots are no-ops.
+  try {
+    const { prisma } = await import("./lib/db/prisma");
+    const migrated = await prisma.user.updateMany({
+      where: { role: "head" },
+      data: { role: "manager" },
+    });
+    if (migrated.count > 0) {
+      console.log(
+        `[instrumentation] migrated ${migrated.count} 'head' user(s) → 'manager'`
+      );
+    }
+  } catch (err) {
+    console.error("[instrumentation] head→manager migration failed:", err);
+  }
+
   const { startScheduler } = await import("./lib/db/backup-scheduler");
   startScheduler();
 

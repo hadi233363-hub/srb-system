@@ -43,7 +43,6 @@ type CellState = "default-on" | "default-off" | "granted" | "revoked";
 const ROLE_COLOR: Record<string, string> = {
   admin: "bg-rose-500/10 text-rose-400 border-rose-500/30",
   manager: "bg-amber-500/10 text-amber-400 border-amber-500/30",
-  head: "bg-violet-500/10 text-violet-400 border-violet-500/30",
   department_lead: "bg-sky-500/10 text-sky-400 border-sky-500/30",
   employee: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30",
 };
@@ -52,15 +51,13 @@ function roleLabel(role: string, locale: "ar" | "en"): string {
   const ar: Record<string, string> = {
     admin: "الرئيس",
     manager: "المدير",
-    head: "رئيس جميع الأقسام",
-    department_lead: "رئيس قسم",
-    employee: "موظف",
+    department_lead: "رئيس الفريق",
+    employee: "الموظف",
   };
   const en: Record<string, string> = {
     admin: "President",
     manager: "Manager",
-    head: "Head of departments",
-    department_lead: "Department head",
+    department_lead: "Team lead",
     employee: "Employee",
   };
   return (locale === "ar" ? ar : en)[role] ?? role;

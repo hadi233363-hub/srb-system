@@ -21,7 +21,6 @@ type AuthRole = Role;
 const ROLE_COLOR: Record<AuthRole, string> = {
   admin: "bg-rose-500/10 text-rose-400 border-rose-500/30",
   manager: "bg-amber-500/10 text-amber-400 border-amber-500/30",
-  head: "bg-violet-500/10 text-violet-400 border-violet-500/30",
   department_lead: "bg-sky-500/10 text-sky-400 border-sky-500/30",
   employee: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30",
 };

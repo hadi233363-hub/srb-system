@@ -19,7 +19,6 @@ import { SmartInsightsPanel } from "@/components/smart-insights";
 import { CreativeCommandCenter } from "@/components/creative-command-center";
 import {
   isDeptLeadOrAbove,
-  isHeadOrAbove,
   isManagerOrAbove,
   isOwner,
 } from "@/lib/auth/roles";
@@ -81,11 +80,11 @@ export default async function OverviewPage() {
   const isEmpty = activeProjects === 0 && allTasks === 0 && teamSize <= 1;
 
   // ---------------------------------------------------------------------
-  // Creative Command Center data — only for head+ roles. Owner / manager /
-  // head share the same view; lower tiers don't see this panel because
-  // the data spans every department.
+  // Creative Command Center data — manager+ only. Owner and managers
+  // share the same view; lower tiers don't see this panel because the
+  // data spans every team.
   // ---------------------------------------------------------------------
-  const showCommandCenter = isHeadOrAbove(role);
+  const showCommandCenter = isManagerOrAbove(role);
   const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
   const [
