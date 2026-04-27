@@ -67,6 +67,8 @@ model User {
   permissionOverrides PermissionOverride[] @relation("PermissionOverrideUser")
   permissionGrants    PermissionOverride[] @relation("PermissionOverrideGrantedBy")
   briefApprovals     ProjectBrief[]     @relation("BriefApprover")
+  assetsAdded        ProjectAsset[]     @relation("AssetAddedBy")
+  deliveriesCreated  ClientDelivery[]   @relation("DeliveryCreatedBy")
 
   @@index([active])
   @@index([role])
@@ -107,6 +109,113 @@ model ProjectBrief {
   updatedAt       DateTime @updatedAt
 
   @@index([approvalStage])
+}
+
+// ---------------------------------------------------------------------------
+// Project package tracker — what the agency promised the client (X posts,
+// Y reels, Z shoots, ...) and how much of that has actually been delivered.
+// 1-to-1 with Project. Counters are incremented manually by the project lead
+// when a deliverable goes out — we don't try to auto-derive from tasks
+// because the same task may produce 3 reels or 0, depending on scope.
+// ---------------------------------------------------------------------------
+model ProjectPackage {
+  id        String  @id @default(cuid())
+  projectId String  @unique
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  // Targets — what the package promised
+  targetPosts   Int @default(0)
+  targetReels   Int @default(0)
+  targetVideos  Int @default(0)
+  targetShoots  Int @default(0)
+  targetStories Int @default(0)
+
+  // Completed — what the team has actually shipped to the client
+  completedPosts   Int @default(0)
+  completedReels   Int @default(0)
+  completedVideos  Int @default(0)
+  completedShoots  Int @default(0)
+  completedStories Int @default(0)
+
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// Project asset — single bucket for every visual reference, mood-board image,
+// brand asset, and final deliverable that lives inside a project. The `kind`
+// column splits them into UI lanes; the file/url fields work for both
+// uploaded files (saved under /uploads via lib/uploads.ts) and external
+// links (Drive, Figma, dribbble, ...).
+// ---------------------------------------------------------------------------
+model ProjectAsset {
+  id          String   @id @default(cuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  // moodboard | reference | brand | deliverable | other
+  kind        String   @default("moodboard")
+  title       String?
+  caption     String?
+
+  // One of fileUrl / externalUrl is required at the application level.
+  fileUrl     String?
+  fileName    String?
+  fileType    String?
+  externalUrl String?
+
+  addedById   String?
+  addedBy     User?    @relation("AssetAddedBy", fields: [addedById], references: [id], onDelete: SetNull)
+  createdAt   DateTime @default(now())
+
+  @@index([projectId, kind])
+  @@index([projectId, createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// Client delivery — one row per individual deliverable handed to the client.
+// Tracks the full lifecycle: drafting → sent → viewed → changes_requested
+// (loops back to drafting) OR approved (terminal). Each transition is
+// timestamped so we can answer "how long did the client take to approve?"
+// and "how many revisions did this take?".
+//
+// This is INTERNAL tracking — the client doesn't sign in. The "viewed" and
+// "approved" timestamps are flipped manually by the account manager based
+// on what they hear from the client.
+// ---------------------------------------------------------------------------
+model ClientDelivery {
+  id          String   @id @default(cuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  title       String
+  // post | reel | video | photo | other
+  kind        String   @default("post")
+
+  // drafting | sent | viewed | changes_requested | approved
+  status      String   @default("drafting")
+
+  deliveryUrl String?
+  previewUrl  String?
+
+  // Lifecycle timestamps. Each is set when status flips to that state.
+  sentAt              DateTime?
+  viewedAt            DateTime?
+  changesRequestedAt  DateTime?
+  approvedAt          DateTime?
+
+  clientFeedback  String?
+  notes           String?
+
+  createdById String?
+  createdBy   User?    @relation("DeliveryCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId, status])
+  @@index([projectId, createdAt])
 }
 
 // ---------------------------------------------------------------------------
@@ -227,6 +336,9 @@ model Project {
   shoots       PhotoShoot[]
   phases       ProjectPhase[]
   brief        ProjectBrief?
+  package      ProjectPackage?
+  assets       ProjectAsset[]
+  deliveries   ClientDelivery[]
 
   @@index([status])
   @@index([clientId])
