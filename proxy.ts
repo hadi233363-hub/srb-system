@@ -31,6 +31,7 @@ const OWNER_PREFIXES = [
   "/admin/audit",
   "/admin/backup",
   "/admin/theme",
+  "/admin/permissions",
   "/api/admin",
   "/api/sim/control",
   "/api/sim/decide",

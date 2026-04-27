@@ -21,11 +21,13 @@ import {
   Package,
   Menu,
   X,
+  KeyRound,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { useLocale, useT } from "@/lib/i18n/client";
 import {
   isDeptLeadOrAbove,
+  isHeadOrAbove,
   isManagerOrAbove,
   isOwner,
   type Role,
@@ -49,7 +51,7 @@ function maskEmail(email: string): string {
 // minRole controls which tier can see a sidebar entry. We resolve it against
 // the user's role via meets() — so e.g. minRole="manager" hides the entry from
 // employees + dept_leads but shows it to managers and owners.
-type MinRole = "owner" | "manager" | "dept_lead" | "any";
+type MinRole = "owner" | "manager" | "head" | "dept_lead" | "any";
 
 interface NavItem {
   href: string;
@@ -73,6 +75,7 @@ const nav: NavItem[] = [
   { href: "/reports", labelKey: "nav.reports", icon: FileText, minRole: "owner" },
   // User approval is now manager-accessible. Owner sees it too via inheritance.
   { href: "/admin/users", labelKey: "nav.admin_users", icon: ShieldCheck, minRole: "manager" },
+  { href: "/admin/permissions", labelKey: "nav.admin_permissions", icon: KeyRound, minRole: "owner" },
   { href: "/admin/audit", labelKey: "nav.admin_audit", icon: Shield, minRole: "owner" },
   { href: "/admin/backup", labelKey: "nav.admin_backup", icon: Archive, minRole: "owner" },
   { href: "/admin/theme", labelKey: "nav.admin_theme", icon: Palette, minRole: "owner" },
@@ -82,6 +85,7 @@ function visibleTo(role: Role, min: MinRole | undefined): boolean {
   if (!min || min === "any") return true;
   if (min === "owner") return isOwner(role);
   if (min === "manager") return isManagerOrAbove(role);
+  if (min === "head") return isHeadOrAbove(role);
   if (min === "dept_lead") return isDeptLeadOrAbove(role);
   return true;
 }
@@ -103,6 +107,16 @@ export function Sidebar({ userRole, userName, userEmail, logoPath }: Props) {
   useEffect(() => {
     setMobileOpen(false);
   }, [pathname]);
+
+  // Listen for the bottom-nav "More" button. We use a window-level custom
+  // event so the bottom nav (a sibling component, not a parent) can trigger
+  // the drawer without lifting state into a wrapper. Pairs with the
+  // dispatcher in components/mobile-bottom-nav.tsx → MobileBottomNavMount.
+  useEffect(() => {
+    const onOpen = () => setMobileOpen(true);
+    window.addEventListener("srb:open-mobile-nav", onOpen);
+    return () => window.removeEventListener("srb:open-mobile-nav", onOpen);
+  }, []);
 
   // Lock body scroll while the drawer is open on mobile.
   useEffect(() => {
@@ -220,6 +234,8 @@ export function Sidebar({ userRole, userName, userEmail, logoPath }: Props) {
                   ? "bg-rose-500/10 text-rose-400"
                   : userRole === "manager"
                   ? "bg-amber-500/10 text-amber-400"
+                  : userRole === "head"
+                  ? "bg-violet-500/10 text-violet-400"
                   : userRole === "department_lead"
                   ? "bg-sky-500/10 text-sky-400"
                   : "bg-emerald-500/10 text-emerald-400"

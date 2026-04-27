@@ -14,15 +14,21 @@ generator client {
 // but owned by Prisma going forward (single source of truth).
 //
 // Role hierarchy (top → bottom), enforced by lib/auth/roles.ts:
-//   admin           → الرئيس (President / Owner) — sees full finance, total control
-//   manager         → المدير — approves users, assigns roles up to dept_lead, runs ops
+//   admin           → الرئيس (Owner) — sees full finance, total control,
+//                     access to PermissionOverride control panel
+//   manager         → المدير (Admin) — approves users, assigns roles up to head,
+//                     runs ops, no finance totals
+//   head            → رئيس جميع الأقسام (Head of All Departments) — cross-dept
+//                     visibility on projects/tasks/submissions; can edit, reassign
+//                     and cancel any task across departments. No finance, no
+//                     people-management, no system settings.
 //   department_lead → رئيس قسم — manages their dept's projects, expenses, salaries, income
 //   employee        → موظف — works on own tasks
 model User {
   id          String    @id @default(cuid())
   email       String    @unique
   name        String
-  role        String    @default("employee") // admin | manager | department_lead | employee
+  role        String    @default("employee") // admin | manager | head | department_lead | employee
   department  String?
   active      Boolean   @default(true)
   // First-approval timestamp. null = pending admin approval (never approved yet).
@@ -58,9 +64,39 @@ model User {
   pushSubscriptions  PushSubscription[] @relation("PushSubscriptionUser")
   phaseSubmissions   ProjectPhase[]     @relation("PhaseSubmitter")
   phaseApprovals     ProjectPhase[]     @relation("PhaseApprover")
+  permissionOverrides PermissionOverride[] @relation("PermissionOverrideUser")
+  permissionGrants    PermissionOverride[] @relation("PermissionOverrideGrantedBy")
 
   @@index([active])
   @@index([role])
+}
+
+// ---------------------------------------------------------------------------
+// Permission overrides — the Owner can flip individual (module, action) pairs
+// on a per-user basis, on top of the role default matrix in
+// lib/auth/permissions.ts. `allowed=true` GRANTS a permission the role would
+// not normally have; `allowed=false` REVOKES one the role would normally have.
+// Absence of a row means "use role default". This lets the Owner build custom
+// permission profiles without inventing new roles.
+// ---------------------------------------------------------------------------
+model PermissionOverride {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation("PermissionOverrideUser", fields: [userId], references: [id], onDelete: Cascade)
+  // Module + action are stored as plain strings (TS union types in
+  // lib/auth/permissions.ts are the source of truth). New modules added later
+  // never require a DB migration.
+  module      String
+  action      String
+  allowed     Boolean
+  grantedById String?
+  grantedBy   User?    @relation("PermissionOverrideGrantedBy", fields: [grantedById], references: [id], onDelete: SetNull)
+  reason      String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([userId, module, action])
+  @@index([userId])
 }
 
 // Skill / role badges that mark what a user is qualified to do.

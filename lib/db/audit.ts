@@ -23,6 +23,10 @@ export type AuditAction =
   | "user.profile_change"
   | "user.badge_add"
   | "user.badge_remove"
+  // Permission overrides — Owner-only Permission Control Panel
+  | "permission.grant"
+  | "permission.revoke"
+  | "permission.reset"
   // Project
   | "project.create"
   | "project.update"
@@ -126,6 +130,9 @@ export const AUDIT_ACTION_LABEL_AR: Record<AuditAction, string> = {
   "user.profile_change": "تعديل بيانات موظف",
   "user.badge_add": "إضافة شارة",
   "user.badge_remove": "إزالة شارة",
+  "permission.grant": "منح صلاحية",
+  "permission.revoke": "سحب صلاحية",
+  "permission.reset": "إرجاع الصلاحية للافتراضي",
   "project.create": "إنشاء مشروع",
   "project.update": "تعديل مشروع",
   "project.delete": "حذف مشروع",
@@ -165,6 +172,9 @@ export const AUDIT_ACTION_LABEL_EN: Record<AuditAction, string> = {
   "user.profile_change": "Update employee profile",
   "user.badge_add": "Add badge",
   "user.badge_remove": "Remove badge",
+  "permission.grant": "Grant permission",
+  "permission.revoke": "Revoke permission",
+  "permission.reset": "Reset permission to default",
   "project.create": "Create project",
   "project.update": "Update project",
   "project.delete": "Delete project",
