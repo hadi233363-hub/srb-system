@@ -27,7 +27,6 @@ import { cn } from "@/lib/cn";
 import { useLocale, useT } from "@/lib/i18n/client";
 import {
   isDeptLeadOrAbove,
-  isHeadOrAbove,
   isManagerOrAbove,
   isOwner,
   type Role,
@@ -51,7 +50,7 @@ function maskEmail(email: string): string {
 // minRole controls which tier can see a sidebar entry. We resolve it against
 // the user's role via meets() — so e.g. minRole="manager" hides the entry from
 // employees + dept_leads but shows it to managers and owners.
-type MinRole = "owner" | "manager" | "head" | "dept_lead" | "any";
+type MinRole = "owner" | "manager" | "dept_lead" | "any";
 
 interface NavItem {
   href: string;
@@ -85,7 +84,6 @@ function visibleTo(role: Role, min: MinRole | undefined): boolean {
   if (!min || min === "any") return true;
   if (min === "owner") return isOwner(role);
   if (min === "manager") return isManagerOrAbove(role);
-  if (min === "head") return isHeadOrAbove(role);
   if (min === "dept_lead") return isDeptLeadOrAbove(role);
   return true;
 }
@@ -234,8 +232,6 @@ export function Sidebar({ userRole, userName, userEmail, logoPath }: Props) {
                   ? "bg-rose-500/10 text-rose-400"
                   : userRole === "manager"
                   ? "bg-amber-500/10 text-amber-400"
-                  : userRole === "head"
-                  ? "bg-violet-500/10 text-violet-400"
                   : userRole === "department_lead"
                   ? "bg-sky-500/10 text-sky-400"
                   : "bg-emerald-500/10 text-emerald-400"

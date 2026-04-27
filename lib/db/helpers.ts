@@ -3,9 +3,8 @@
 export const ROLE_LABEL: Record<string, string> = {
   admin: "الرئيس",
   manager: "المدير",
-  head: "رئيس جميع الأقسام",
-  department_lead: "رئيس قسم",
-  employee: "موظف",
+  department_lead: "رئيس الفريق",
+  employee: "الموظف",
 };
 
 export const PROJECT_STATUS_LABEL: Record<string, string> = {

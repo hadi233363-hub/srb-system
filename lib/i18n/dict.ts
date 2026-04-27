@@ -22,13 +22,12 @@ export const DICT: Record<string, { ar: string; en: string }> = {
   "nav.admin_users": { ar: "إدارة الحسابات", en: "User management" },
 
   // Roles — labels reflect the 4-tier hierarchy: الرئيس (admin/owner) →
-  // المدير (manager) → رئيس جميع الأقسام (head) → رئيس قسم (department_lead)
-  // → موظف (employee). DB role value `admin` represents the owner tier.
+  // المدير (manager) → رئيس الفريق (department_lead) → الموظف (employee).
+  // DB role value `admin` represents the owner tier.
   "role.admin": { ar: "الرئيس", en: "President" },
   "role.manager": { ar: "المدير", en: "Manager" },
-  "role.head": { ar: "رئيس جميع الأقسام", en: "Head of all departments" },
-  "role.department_lead": { ar: "رئيس قسم", en: "Department Head" },
-  "role.employee": { ar: "موظف", en: "Employee" },
+  "role.department_lead": { ar: "رئيس الفريق", en: "Team lead" },
+  "role.employee": { ar: "الموظف", en: "Employee" },
 
   // Auth
   "auth.signout": { ar: "تسجيل خروج", en: "Sign out" },

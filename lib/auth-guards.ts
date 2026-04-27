@@ -12,7 +12,6 @@
 import { auth } from "@/auth";
 import {
   isDeptLeadOrAbove,
-  isHeadOrAbove,
   isManagerOrAbove,
   isOwner,
   type Role,
@@ -63,16 +62,7 @@ export async function requireManagerOrAbove(): Promise<ActiveUser> {
   return user;
 }
 
-/** Head of all departments or above — cross-dept ops scope. */
-export async function requireHeadOrAbove(): Promise<ActiveUser> {
-  const user = await requireActiveUser();
-  if (!isHeadOrAbove(user.role)) {
-    throw new Error("صلاحيات غير كافية");
-  }
-  return user;
-}
-
-/** Department lead or above — adds projects / transactions / meetings / shoots. */
+/** Team lead or above — adds projects / transactions / meetings / shoots. */
 export async function requireDeptLeadOrAbove(): Promise<ActiveUser> {
   const user = await requireActiveUser();
   if (!isDeptLeadOrAbove(user.role)) {
