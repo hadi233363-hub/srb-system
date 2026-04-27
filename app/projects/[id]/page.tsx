@@ -26,6 +26,10 @@ import { getLocale } from "@/lib/i18n/server";
 import { translate } from "@/lib/i18n/dict";
 import { InvoiceBadge } from "@/components/projects/invoice-badge";
 import { ProjectPhases } from "@/components/projects/project-phases";
+import { CreativeBrief } from "@/components/projects/creative-brief";
+import { ProjectProfit } from "@/components/projects/project-profit";
+import { hasPermission } from "@/lib/auth/permissions";
+import { getUserOverrides } from "@/lib/db/permissions";
 
 export default async function ProjectDetailPage(props: {
   params: Promise<{ id: string }>;
@@ -84,6 +88,11 @@ export default async function ProjectDetailPage(props: {
           },
         },
       },
+      brief: {
+        include: {
+          approvedBy: { select: { id: true, name: true } },
+        },
+      },
     },
   });
 
@@ -120,6 +129,49 @@ export default async function ProjectDetailPage(props: {
     (t) => t.dueAt && t.dueAt.getTime() < Date.now() && t.status !== "done"
   ).length;
   const tasksDone = project.tasks.filter((t) => t.status === "done").length;
+
+  // Brief permission gates resolve overrides on top of role defaults.
+  const userOverrides = session?.user
+    ? await getUserOverrides(session.user.id)
+    : [];
+  const sessionUser = session?.user;
+  const canEditBrief =
+    !!sessionUser &&
+    hasPermission(sessionUser, "brief", "edit", userOverrides);
+  const canApproveBrief =
+    !!sessionUser &&
+    hasPermission(sessionUser, "brief", "approve", userOverrides);
+
+  // Owner-only profit numbers — aggregate the project's transactions.
+  const ownerView = isOwner(session?.user.role);
+  let profitTotals: {
+    income: number;
+    expenses: number;
+    net: number;
+    marginPct: number | null;
+    transactionCount: number;
+  } | null = null;
+  if (ownerView) {
+    const txns = await prisma.transaction.findMany({
+      where: { projectId: project.id },
+      select: { kind: true, amountQar: true },
+    });
+    let income = 0;
+    let expenses = 0;
+    for (const tx of txns) {
+      if (tx.kind === "income") income += tx.amountQar;
+      else if (tx.kind === "expense") expenses += tx.amountQar;
+    }
+    const net = income - expenses;
+    const marginPct = income > 0 ? (net / income) * 100 : null;
+    profitTotals = {
+      income,
+      expenses,
+      net,
+      marginPct,
+      transactionCount: txns.length,
+    };
+  }
 
   return (
     <div className="space-y-6">
@@ -234,6 +286,25 @@ export default async function ProjectDetailPage(props: {
           </div>
         )}
       </div>
+
+      {/* Owner-only project profit (computed from transactions). */}
+      {ownerView && profitTotals && (
+        <ProjectProfit
+          totals={profitTotals}
+          budgetQar={project.budgetQar}
+          locale={locale}
+        />
+      )}
+
+      {/* Creative brief — collapsible card. Anyone with brief:view can read,
+          brief:edit can author, brief:approve can lock. */}
+      <CreativeBrief
+        projectId={project.id}
+        brief={project.brief}
+        canEdit={canEditBrief}
+        canApprove={canApproveBrief}
+        locale={locale}
+      />
 
       {/* Members */}
       <section>

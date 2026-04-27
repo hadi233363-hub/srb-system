@@ -113,6 +113,16 @@ export async function POST(
 
   const now = new Date();
 
+  // Revision number = (count of prior submissions on this task) + 1. So the
+  // very first submission is Revision 1; if the owner requests changes and
+  // the assignee re-submits, that becomes Revision 2; etc. Computed inside
+  // the transaction so concurrent submits are handled by Prisma's serial
+  // execution within $transaction.
+  const priorCount = await prisma.taskSubmission.count({
+    where: { taskId: id },
+  });
+  const revisionNumber = priorCount + 1;
+
   await prisma.$transaction([
     // Latest snapshot on the Task row.
     prisma.task.update({
@@ -142,6 +152,7 @@ export async function POST(
         fileType: fileType,
         note: note,
         status: "pending",
+        revisionNumber,
       },
     }),
     prisma.taskUpdate.create({
@@ -180,6 +191,7 @@ export async function POST(
     target: { type: "task", id, label: task.title },
     metadata: {
       event: "submission.created",
+      revisionNumber,
       hasLink: !!linkUrl,
       hasFile: !!fileUrl,
     },
