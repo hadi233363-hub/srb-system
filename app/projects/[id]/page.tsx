@@ -31,6 +31,7 @@ import { ProjectProfit } from "@/components/projects/project-profit";
 import { PackageTracker } from "@/components/projects/package-tracker";
 import { ProjectAssets } from "@/components/projects/project-assets";
 import { ClientDeliveries } from "@/components/projects/client-deliveries";
+import { ProjectFreelancers } from "@/components/projects/project-freelancers";
 import { hasPermission } from "@/lib/auth/permissions";
 import { getUserOverrides } from "@/lib/db/permissions";
 
@@ -109,6 +110,20 @@ export default async function ProjectDetailPage(props: {
         },
         orderBy: { createdAt: "desc" },
       },
+      freelancers: {
+        include: {
+          payments: {
+            select: {
+              id: true,
+              amountQar: true,
+              occurredAt: true,
+              description: true,
+            },
+            orderBy: { occurredAt: "desc" },
+          },
+        },
+        orderBy: [{ status: "asc" }, { createdAt: "desc" }],
+      },
     },
   });
 
@@ -181,6 +196,22 @@ export default async function ProjectDetailPage(props: {
   const canDeleteDelivery =
     !!sessionUser &&
     hasPermission(sessionUser, "clientDelivery", "delete", userOverrides);
+
+  const canViewFreelancers =
+    !!sessionUser &&
+    hasPermission(sessionUser, "freelancers", "view", userOverrides);
+  const canCreateFreelancer =
+    !!sessionUser &&
+    hasPermission(sessionUser, "freelancers", "create", userOverrides);
+  const canEditFreelancer =
+    !!sessionUser &&
+    hasPermission(sessionUser, "freelancers", "edit", userOverrides);
+  const canApproveFreelancer =
+    !!sessionUser &&
+    hasPermission(sessionUser, "freelancers", "approve", userOverrides);
+  const canDeleteFreelancer =
+    !!sessionUser &&
+    hasPermission(sessionUser, "freelancers", "delete", userOverrides);
 
   // Owner-only profit numbers — aggregate the project's transactions.
   const ownerView = isOwner(session?.user.role);
@@ -375,6 +406,22 @@ export default async function ProjectDetailPage(props: {
         canDelete={canDeleteDelivery}
         locale={locale}
       />
+
+      {/* Project freelancers — per-project contractors paid out of the
+          project's own budget. The "Record payment" action creates a
+          Transaction (category=freelance) linked to both the project and
+          the freelancer, so the project profit widget updates live. */}
+      {canViewFreelancers && (
+        <ProjectFreelancers
+          projectId={project.id}
+          freelancers={project.freelancers}
+          canCreate={canCreateFreelancer}
+          canEdit={canEditFreelancer}
+          canApprove={canApproveFreelancer}
+          canDelete={canDeleteFreelancer}
+          locale={locale}
+        />
+      )}
 
       {/* Members */}
       <section>

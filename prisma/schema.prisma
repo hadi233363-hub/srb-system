@@ -339,6 +339,7 @@ model Project {
   package      ProjectPackage?
   assets       ProjectAsset[]
   deliveries   ClientDelivery[]
+  freelancers  ProjectFreelancer[]
 
   @@index([status])
   @@index([clientId])
@@ -553,13 +554,19 @@ model Transaction {
   projectId   String?
   project     Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
   kind        String // income | expense
-  category    String // project_payment | salary | bonus | tool | ad | overhead | refund | other
+  category    String // project_payment | salary | bonus | tool | ad | overhead | refund | freelance | other
   amountQar   Float // always positive; sign comes from kind
   description String?
   occurredAt  DateTime
   // Recurrence — none: one-time; monthly: recurring every month starting occurredAt until recurrenceEndsAt (or forever).
   recurrence       String    @default("none") // none | monthly
   recurrenceEndsAt DateTime?
+  // Optional link to a per-project freelancer. When set, the transaction
+  // counts toward the freelancer's "paid so far" total. Always paired with
+  // category = "freelance" and a non-null projectId, but enforced at the
+  // application level so legacy rows continue to work.
+  freelancerId String?
+  freelancer   ProjectFreelancer? @relation(fields: [freelancerId], references: [id], onDelete: SetNull)
   createdAt        DateTime  @default(now())
   createdById      String?
 
@@ -567,6 +574,54 @@ model Transaction {
   @@index([projectId])
   @@index([kind])
   @@index([recurrence])
+  @@index([freelancerId])
+}
+
+// ---------------------------------------------------------------------------
+// Project freelancer — per-project contractor (photographer, designer,
+// videographer, ...) hired for THIS project only. Their salary is paid out
+// of the project budget, not the company payroll. Linked to Transaction so
+// the project profit widget automatically subtracts every payment.
+//
+// Why a dedicated model instead of just expense rows:
+//   1. Track the AGREED total separately from PAID-so-far (compute remaining)
+//   2. One stable identity ("Ahmed the photographer") that survives multiple
+//      payment instalments
+//   3. Keep their phone / WhatsApp on file without bloating the User table
+//   4. Future-proof for "history of freelancers we've used" reports
+// ---------------------------------------------------------------------------
+model ProjectFreelancer {
+  id        String  @id @default(cuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  name  String
+  // Free-form role label. We seed common roles client-side (مصور، ديزاينر،
+  // مونتير، صوت، ...) but allow custom because every project may need a
+  // different specialty.
+  role  String  @default("photographer")
+  phone String?
+  email String?
+
+  // What the freelancer was promised. The "paid so far" total is computed
+  // live from Transaction rows linked via freelancerId.
+  agreedAmountQar Float   @default(0)
+  // Free-text payment terms ("50% upfront, 50% on delivery", "monthly", ...).
+  paymentTerms    String?
+
+  // active | completed | cancelled. Doesn't delete payment history when set
+  // to cancelled — only hides the freelancer from the active list.
+  status String @default("active")
+
+  notes String?
+
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  payments Transaction[]
+
+  @@index([projectId, status])
 }
 
 // System-level settings (single row).

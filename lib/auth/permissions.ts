@@ -34,6 +34,7 @@ export const MODULES = [
   "package",
   "assets",
   "clientDelivery",
+  "freelancers",
   "shoots",
   "meetings",
   "equipment",
@@ -112,6 +113,15 @@ export const MODULE_SPECS: readonly ModuleSpec[] = [
     key: "clientDelivery",
     labelAr: "تسليم العميل",
     labelEn: "Client delivery",
+    actions: ["view", "create", "edit", "delete", "approve"],
+  },
+  {
+    key: "freelancers",
+    labelAr: "الفري لانسر",
+    labelEn: "Freelancers",
+    // "approve" doubles as "mark a payment as paid" — only the owner +
+    // manager get it by default so a dept_lead can ADD a freelancer and
+    // record the agreed amount but can't actually move money.
     actions: ["view", "create", "edit", "delete", "approve"],
   },
   {
@@ -242,6 +252,12 @@ const MANAGER_PERMS: PermissionSet = new Set<Permission>([
   p("clientDelivery", "edit"),
   p("clientDelivery", "delete"),
   p("clientDelivery", "approve"),
+  // Freelancers — full control for manager (records payments).
+  p("freelancers", "view"),
+  p("freelancers", "create"),
+  p("freelancers", "edit"),
+  p("freelancers", "delete"),
+  p("freelancers", "approve"),
   // Shoots
   p("shoots", "view"),
   p("shoots", "create"),
@@ -316,6 +332,10 @@ const HEAD_PERMS: PermissionSet = new Set<Permission>([
   p("clientDelivery", "edit"),
   p("clientDelivery", "delete"),
   p("clientDelivery", "approve"),
+  // Freelancers — head sees + manages but doesn't move money (approve gate).
+  p("freelancers", "view"),
+  p("freelancers", "create"),
+  p("freelancers", "edit"),
   // Shoots
   p("shoots", "view"),
   p("shoots", "create"),
@@ -359,6 +379,11 @@ const DEPT_LEAD_PERMS: PermissionSet = new Set<Permission>([
   p("clientDelivery", "view"),
   p("clientDelivery", "create"),
   p("clientDelivery", "edit"),
+  // Dept lead can hire and edit freelancers in their dept; "approve"
+  // (= mark a payment as paid) stays manager+ to keep money moves locked.
+  p("freelancers", "view"),
+  p("freelancers", "create"),
+  p("freelancers", "edit"),
   p("shoots", "view"),
   p("shoots", "create"),
   p("shoots", "edit"),

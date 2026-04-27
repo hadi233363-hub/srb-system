@@ -432,6 +432,7 @@ export const DICT: Record<string, { ar: string; en: string }> = {
   "txCategory.project_payment": { ar: "دفعة مشروع", en: "Project payment" },
   "txCategory.salary": { ar: "راتب", en: "Salary" },
   "txCategory.bonus": { ar: "بونص", en: "Bonus" },
+  "txCategory.freelance": { ar: "فري لانس (مشروع)", en: "Freelance (project)" },
   "txCategory.tool": { ar: "أدوات/اشتراكات", en: "Tools/subscriptions" },
   "txCategory.ad": { ar: "إعلانات", en: "Ads" },
   "txCategory.overhead": { ar: "مصاريف عامة", en: "Overhead" },
