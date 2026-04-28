@@ -57,6 +57,10 @@ export type AuditAction =
   | "tx.create"
   | "tx.update"
   | "tx.delete"
+  // Client (CRM)
+  | "client.create"
+  | "client.update"
+  | "client.delete"
   // Backup
   | "backup.run";
 
@@ -69,7 +73,8 @@ export interface AuditTarget {
     | "backup"
     | "meeting"
     | "shoot"
-    | "equipment";
+    | "equipment"
+    | "client";
   id?: string | null;
   label?: string | null;
 }
@@ -157,6 +162,9 @@ export const AUDIT_ACTION_LABEL_AR: Record<AuditAction, string> = {
   "tx.create": "إضافة معاملة مالية",
   "tx.update": "تعديل معاملة مالية",
   "tx.delete": "حذف معاملة مالية",
+  "client.create": "إضافة عميل",
+  "client.update": "تعديل بيانات عميل",
+  "client.delete": "حذف عميل",
   "backup.run": "نسخ احتياطي",
 };
 
@@ -199,6 +207,9 @@ export const AUDIT_ACTION_LABEL_EN: Record<AuditAction, string> = {
   "tx.create": "Add transaction",
   "tx.update": "Update transaction",
   "tx.delete": "Delete transaction",
+  "client.create": "Add client",
+  "client.update": "Update client",
+  "client.delete": "Delete client",
   "backup.run": "Backup",
 };
 
