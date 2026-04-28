@@ -65,8 +65,10 @@ export default async function ClientsPage() {
   });
 
   // Reduce the heavy nested objects to flat numbers / strings the client
-  // component can sort + filter cheaply. We compute "last project" + "joined"
-  // here (server) so the client never sees raw transaction rows.
+  // component can sort + filter cheaply. We compute "last project", "joined",
+  // and the active/finished status here (server) so the client never sees
+  // raw transaction rows. Status is a pure derivation of project states —
+  // never persisted, always recomputed from the source of truth.
   const rows = clients.map((c) => {
     const totalRevenue = c.projects.reduce(
       (sum, p) => sum + p.transactions.reduce((a, t) => a + t.amountQar, 0),
@@ -74,9 +76,13 @@ export default async function ClientsPage() {
     );
     const last = c.projects[0];
     const first = c.projects[c.projects.length - 1];
+    // "Active" = at least one project still in `active` state. Anything else
+    // (only completed/cancelled, or no projects at all) is "finished".
+    const isActive = c.projects.some((p) => p.status === "active");
     return {
       id: c.id,
       name: c.name,
+      brandName: c.brandName,
       phone: c.phone,
       email: c.email,
       projectsCount: c.projects.length,
@@ -84,6 +90,7 @@ export default async function ClientsPage() {
       lastProjectTitle: last?.title ?? null,
       lastProjectAt: (last?.createdAt ?? null) as Date | null,
       joinedAt: (first?.createdAt ?? c.createdAt) as Date,
+      isActive,
     };
   });
 

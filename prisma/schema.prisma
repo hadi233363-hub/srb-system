@@ -69,6 +69,7 @@ model User {
   briefApprovals     ProjectBrief[]     @relation("BriefApprover")
   assetsAdded        ProjectAsset[]     @relation("AssetAddedBy")
   deliveriesCreated  ClientDelivery[]   @relation("DeliveryCreatedBy")
+  clientNotesAuthored ClientNote[]      @relation("ClientNoteAuthor")
 
   @@index([active])
   @@index([role])
@@ -298,8 +299,16 @@ model UserBadge {
 model Client {
   id        String    @id @default(cuid())
   name      String
+  // Brand / company name — separate from `name` so a single client (e.g. an
+  // agency contact "Mohammed Al-Kuwari") can hold multiple brand identities.
+  // Auto-populated from the project form when a client is first linked to a
+  // project that supplies a brand; never overwritten if already set.
+  brandName String?
   email     String?
   phone     String?
+  // Free-form textarea on the profile page (general notes about the client).
+  // Distinct from the chronological `noteEntries` relation below, which logs
+  // dated touchpoints with the user attribution and a separate row per entry.
   notes     String?
   createdAt DateTime  @default(now())
   // @default(now()) is required so `prisma db push` can backfill existing
@@ -311,9 +320,36 @@ model Client {
   // never reaches `next start`, taking the whole deploy down.
   updatedAt DateTime  @default(now()) @updatedAt
   projects  Project[]
+  // Chronological touchpoint log — see ClientNote. Named `noteEntries` (not
+  // `notes`) to avoid colliding with the free-form `notes` text field above.
+  noteEntries ClientNote[]
 
   @@index([name])
   @@index([phone])
+  @@index([brandName])
+}
+
+// ---------------------------------------------------------------------------
+// Client touchpoint log — one row per "we talked to this client" entry.
+// Lives on the client profile page as a chronological feed (newest first)
+// so the team has a single source of truth for "when did we last reach out
+// and what was said". Distinct from `Client.notes` (free-form general
+// description that doesn't track time/author). Distinct from
+// `ClientMeeting` (formal scheduled meetings with reminders / agenda).
+// ---------------------------------------------------------------------------
+model ClientNote {
+  id        String   @id @default(cuid())
+  clientId  String
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  content   String
+  createdAt DateTime @default(now())
+  // Author. SetNull on delete so a deleted user doesn't take their notes
+  // with them — the entry stays for the audit trail with author=null.
+  createdById String?
+  author      User?  @relation("ClientNoteAuthor", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([clientId, createdAt])
+  @@index([createdById])
 }
 
 model Project {
@@ -322,7 +358,13 @@ model Project {
   description  String?
   clientId     String?
   client       Client?   @relation(fields: [clientId], references: [id], onDelete: SetNull)
-  type         String? // video | photo | event | digital_campaign | web | other
+  // Brand / company under which this project is delivered. May differ from
+  // the client's display name (e.g. one agency contact owning multiple
+  // brands). Synced into Client.brandName the first time a client gets a
+  // brand assigned; subsequent project entries never overwrite the client's
+  // existing brand — that's an explicit edit on the client profile.
+  brandName    String?
+  type         String? // video | photo | event | digital_campaign | web | design | branding | other
   status       String    @default("active") // active | on_hold | completed | cancelled
   priority     String    @default("normal") // low | normal | high | urgent
   budgetQar    Float     @default(0)

@@ -96,6 +96,13 @@ export function NewProjectButton({ users }: { users: User[] }) {
                   placeholder={t("projects.field.clientPlaceholder")}
                 />
               </Field>
+              <Field label={t("projects.field.brand")}>
+                <input
+                  name="brandName"
+                  placeholder={t("projects.field.brandPlaceholder")}
+                  className="w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 focus:border-emerald-500/50 focus:outline-none"
+                />
+              </Field>
               <Field label={t("projects.field.type")}>
                 <select
                   name="type"
@@ -108,6 +115,8 @@ export function NewProjectButton({ users }: { users: User[] }) {
                   <option value="event">{t("projectType.event")}</option>
                   <option value="digital_campaign">{t("projectType.digital_campaign")}</option>
                   <option value="web">{t("projectType.web")}</option>
+                  <option value="design">{t("projectType.design")}</option>
+                  <option value="branding">{t("projectType.branding")}</option>
                   <option value="other">{t("projectType.other")}</option>
                 </select>
               </Field>

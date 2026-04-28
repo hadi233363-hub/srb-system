@@ -13,10 +13,12 @@ import type { Locale } from "@/lib/i18n/dict";
 import { formatDate, formatQar } from "@/lib/db/helpers";
 import { cn } from "@/lib/cn";
 import { createClientAction } from "./actions";
+import { ClientStatusBadge } from "./client-status-badge";
 
 interface Row {
   id: string;
   name: string;
+  brandName: string | null;
   phone: string | null;
   email: string | null;
   projectsCount: number;
@@ -24,6 +26,7 @@ interface Row {
   lastProjectTitle: string | null;
   lastProjectAt: Date | string | null;
   joinedAt: Date | string;
+  isActive: boolean;
 }
 
 interface Props {
@@ -45,7 +48,12 @@ export function ClientsTable({ rows, canCreate, locale, emptyAddOnly }: Props) {
     return rows.filter((r) => {
       const name = r.name.toLowerCase();
       const phone = (r.phone ?? "").toLowerCase();
-      return name.includes(needle) || phone.includes(needle);
+      const brand = (r.brandName ?? "").toLowerCase();
+      return (
+        name.includes(needle) ||
+        phone.includes(needle) ||
+        brand.includes(needle)
+      );
     });
   }, [rows, q]);
 
@@ -111,6 +119,8 @@ export function ClientsTable({ rows, canCreate, locale, emptyAddOnly }: Props) {
           <thead>
             <tr className="border-b border-zinc-800 text-[11px] uppercase tracking-wide text-zinc-500">
               <Th>{t("clients.col.name")}</Th>
+              <Th>{t("clients.col.status")}</Th>
+              <Th>{t("clients.col.brand")}</Th>
               <Th>{t("clients.col.phone")}</Th>
               <Th align="end">{t("clients.col.projectsCount")}</Th>
               <Th align="end">{t("clients.col.totalRevenue")}</Th>
@@ -131,6 +141,16 @@ export function ClientsTable({ rows, canCreate, locale, emptyAddOnly }: Props) {
                   >
                     {r.name}
                   </Link>
+                </td>
+                <td className="px-3 py-2">
+                  <ClientStatusBadge isActive={r.isActive} />
+                </td>
+                <td className="px-3 py-2 text-zinc-300">
+                  {r.brandName ? (
+                    <span className="truncate">{r.brandName}</span>
+                  ) : (
+                    <span className="text-zinc-600">—</span>
+                  )}
                 </td>
                 <td className="px-3 py-2 text-zinc-400">
                   {r.phone ? (
@@ -183,7 +203,7 @@ export function ClientsTable({ rows, canCreate, locale, emptyAddOnly }: Props) {
             ))}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-3 py-8 text-center text-sm text-zinc-500">
+                <td colSpan={8} className="px-3 py-8 text-center text-sm text-zinc-500">
                   {q ? t("clients.combobox.noResults") : t("clients.empty.title")}
                 </td>
               </tr>
@@ -256,6 +276,13 @@ function NewClientModal({ onClose }: { onClose: () => void }) {
               required
               autoFocus
               placeholder={t("clients.field.namePlaceholder")}
+              className="w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 focus:border-emerald-500/50 focus:outline-none"
+            />
+          </Field>
+          <Field label={t("clients.field.brand")}>
+            <input
+              name="brandName"
+              placeholder={t("clients.field.brandPlaceholder")}
               className="w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 focus:border-emerald-500/50 focus:outline-none"
             />
           </Field>

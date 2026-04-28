@@ -16,6 +16,8 @@ interface Props {
   currentProgress: number;
   currentDescription: string | null;
   currentBillingType: string;
+  currentBrandName: string | null;
+  currentType: string | null;
 }
 
 export function ProjectActionsMenu({
@@ -28,6 +30,8 @@ export function ProjectActionsMenu({
   currentProgress,
   currentDescription,
   currentBillingType,
+  currentBrandName,
+  currentType,
 }: Props) {
   const t = useT();
   const [editOpen, setEditOpen] = useState(false);
@@ -131,6 +135,31 @@ export function ProjectActionsMenu({
                   defaultValue={currentTitle}
                   className="w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 focus:border-emerald-500/50 focus:outline-none"
                 />
+              </Field>
+              <Field label={t("projects.field.brand")}>
+                <input
+                  name="brandName"
+                  defaultValue={currentBrandName ?? ""}
+                  placeholder={t("projects.field.brandPlaceholder")}
+                  className="w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 focus:border-emerald-500/50 focus:outline-none"
+                />
+              </Field>
+              <Field label={t("projects.field.type")}>
+                <select
+                  name="type"
+                  defaultValue={currentType ?? ""}
+                  className="w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 focus:border-emerald-500/50 focus:outline-none"
+                >
+                  <option value="">—</option>
+                  <option value="video">{t("projectType.video")}</option>
+                  <option value="photo">{t("projectType.photo")}</option>
+                  <option value="event">{t("projectType.event")}</option>
+                  <option value="digital_campaign">{t("projectType.digital_campaign")}</option>
+                  <option value="web">{t("projectType.web")}</option>
+                  <option value="design">{t("projectType.design")}</option>
+                  <option value="branding">{t("projectType.branding")}</option>
+                  <option value="other">{t("projectType.other")}</option>
+                </select>
               </Field>
               <Field label={t("tasks.field.status")}>
                 <select

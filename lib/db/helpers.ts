@@ -27,6 +27,8 @@ export const PROJECT_TYPE_LABEL: Record<string, string> = {
   event: "فعالية",
   digital_campaign: "حملة رقمية",
   web: "ويب",
+  design: "ديزاين",
+  branding: "إنشاء علامة تجارية",
   other: "غير ذلك",
 };
 

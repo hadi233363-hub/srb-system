@@ -309,6 +309,8 @@ export default async function ProjectDetailPage(props: {
               currentProgress={project.progressPct}
               currentDescription={project.description}
               currentBillingType={project.billingType}
+              currentBrandName={project.brandName}
+              currentType={project.type}
             />
           )}
         </div>

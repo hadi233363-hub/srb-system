@@ -12,6 +12,7 @@ import { getLocale } from "@/lib/i18n/server";
 import { translate } from "@/lib/i18n/dict";
 import { hasPermission } from "@/lib/auth/permissions";
 import { getUserOverrides } from "@/lib/db/permissions";
+import { isOwner } from "@/lib/auth/roles";
 import { cn } from "@/lib/cn";
 import {
   PROJECT_STATUS_COLOR,
@@ -19,6 +20,8 @@ import {
   formatQar,
 } from "@/lib/db/helpers";
 import { ClientProfileForm } from "../client-profile-form";
+import { ClientStatusBadge } from "../client-status-badge";
+import { ClientNotesSection } from "../client-notes-section";
 
 export const dynamic = "force-dynamic";
 
@@ -67,6 +70,12 @@ export default async function ClientDetailPage(props: {
         },
         orderBy: { createdAt: "desc" },
       },
+      noteEntries: {
+        include: {
+          author: { select: { id: true, name: true } },
+        },
+        orderBy: { createdAt: "desc" },
+      },
     },
   });
 
@@ -81,6 +90,9 @@ export default async function ClientDetailPage(props: {
   const activeCount = client.projects.filter(
     (p) => p.status === "active" || p.status === "on_hold"
   ).length;
+  // Computed status — same rule as the table: "active" if at least one
+  // project is in `active` state, otherwise "finished". Never persisted.
+  const isActive = client.projects.some((p) => p.status === "active");
 
   return (
     <div className="space-y-6">
@@ -97,8 +109,14 @@ export default async function ClientDetailPage(props: {
             <UsersRound className="h-6 w-6" />
           </div>
           <div className="min-w-0">
-            <h1 className="text-2xl font-bold">{client.name}</h1>
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-2xl font-bold">{client.name}</h1>
+              <ClientStatusBadge isActive={isActive} size="lg" />
+            </div>
             <p className="text-xs text-zinc-500">
+              {client.brandName && (
+                <span className="text-zinc-300">{client.brandName} · </span>
+              )}
               {client.projects.length} {t("clients.col.projectsCount")} ·{" "}
               {totalPaid > 0 ? formatQar(totalPaid, { locale }) : "—"}
             </p>
@@ -111,6 +129,7 @@ export default async function ClientDetailPage(props: {
         id={client.id}
         initial={{
           name: client.name,
+          brandName: client.brandName,
           phone: client.phone,
           email: client.email,
           notes: client.notes,
@@ -199,6 +218,19 @@ export default async function ClientDetailPage(props: {
           </div>
         )}
       </section>
+
+      {/* Communication log — touchpoint notes */}
+      <ClientNotesSection
+        clientId={client.id}
+        notes={client.noteEntries.map((n) => ({
+          id: n.id,
+          content: n.content,
+          createdAt: n.createdAt,
+          author: n.author ? { id: n.author.id, name: n.author.name } : null,
+        }))}
+        currentUserId={sessionUser.id}
+        currentUserIsOwner={isOwner(sessionUser.role)}
+      />
 
       {/* Financial summary */}
       <section className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-4">

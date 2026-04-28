@@ -412,6 +412,8 @@ export const DICT: Record<string, { ar: string; en: string }> = {
   "projectType.event": { ar: "فعالية", en: "Event" },
   "projectType.digital_campaign": { ar: "حملة رقمية", en: "Digital campaign" },
   "projectType.web": { ar: "ويب", en: "Web" },
+  "projectType.design": { ar: "ديزاين", en: "Design" },
+  "projectType.branding": { ar: "إنشاء علامة تجارية", en: "Branding" },
   "projectType.other": { ar: "غير ذلك", en: "Other" },
 
   // Priority
@@ -987,6 +989,11 @@ export const DICT: Record<string, { ar: string; en: string }> = {
     ar: "اسم الشركة أو الشخص",
     en: "Company or person name",
   },
+  "projects.field.brand": { ar: "اسم البراند / الشركة", en: "Brand / company" },
+  "projects.field.brandPlaceholder": {
+    ar: "مثال: SRB Agency، مطعم الشرق...",
+    en: "e.g. SRB Agency, Al-Sharq Restaurant...",
+  },
   "projects.field.type": { ar: "النوع", en: "Type" },
   "projects.field.priority": { ar: "الأولوية", en: "Priority" },
   "projects.field.budget": { ar: "الميزانية (ر.ق)", en: "Budget (QAR)" },
@@ -1431,8 +1438,8 @@ export const DICT: Record<string, { ar: string; en: string }> = {
     en: "Clients auto-register when you create a project with a new client name. You can also add one manually with the button above.",
   },
   "clients.searchPlaceholder": {
-    ar: "ابحث بالاسم أو رقم الهاتف…",
-    en: "Search by name or phone…",
+    ar: "ابحث بالاسم، البراند، أو رقم الهاتف…",
+    en: "Search by name, brand, or phone…",
   },
   "clients.action.new": { ar: "عميل جديد", en: "New client" },
   "clients.action.add": { ar: "أضف العميل", en: "Add client" },
@@ -1494,6 +1501,36 @@ export const DICT: Record<string, { ar: string; en: string }> = {
   },
   "clients.combobox.linked": { ar: "مرتبط", en: "Linked" },
   "clients.combobox.clear": { ar: "إلغاء الاختيار", en: "Clear" },
+
+  // Brand column + computed status badge
+  "clients.col.brand": { ar: "البراند", en: "Brand" },
+  "clients.col.status": { ar: "الحالة", en: "Status" },
+  "clients.status.active": { ar: "نشط", en: "Active" },
+  "clients.status.inactive": { ar: "منتهي", en: "Finished" },
+  "clients.field.brand": { ar: "اسم البراند / الشركة", en: "Brand / company" },
+  "clients.field.brandPlaceholder": {
+    ar: "مثال: SRB Agency، مطعم الشرق...",
+    en: "e.g. SRB Agency, Al-Sharq Restaurant...",
+  },
+
+  // Touchpoint / communication log on the client profile
+  "clients.notes.title": { ar: "سجل التواصل والملاحظات", en: "Communication log" },
+  "clients.notes.placeholder": {
+    ar: "اكتب ملاحظة... مثال: تم التواصل اليوم وأبدى اهتمامه بتجديد العقد",
+    en: "Write a note... e.g. Called today, showed interest in renewing the contract",
+  },
+  "clients.notes.add": { ar: "أضف ملاحظة", en: "Add note" },
+  "clients.notes.adding": { ar: "جاري الإضافة…", en: "Adding…" },
+  "clients.notes.empty": {
+    ar: "لا توجد ملاحظات بعد. ابدأ بتسجيل أول تواصل مع العميل.",
+    en: "No notes yet. Start by logging the first touchpoint.",
+  },
+  "clients.notes.deletedAuthor": { ar: "حساب محذوف", en: "Deleted account" },
+  "clients.notes.deleteConfirm": {
+    ar: "حذف هذه الملاحظة؟",
+    en: "Delete this note?",
+  },
+  "clients.notes.delete": { ar: "حذف", en: "Delete" },
 };
 
 /** Translate a key into a given locale. Falls back to English if key missing. */
