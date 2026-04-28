@@ -106,10 +106,14 @@ export function ProjectActionsMenu({
 
       {editOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+          className="fixed inset-0 z-50 overflow-y-auto bg-black/60"
           onClick={(e) => e.target === e.currentTarget && setEditOpen(false)}
         >
-          <div className="w-full max-w-lg rounded-2xl border border-zinc-800 bg-zinc-900 p-5 shadow-2xl">
+          <div
+            className="flex min-h-full items-center justify-center p-4"
+            onClick={(e) => e.target === e.currentTarget && setEditOpen(false)}
+          >
+            <div className="my-4 w-full max-w-lg rounded-2xl border border-zinc-800 bg-zinc-900 p-5 shadow-2xl">
             <div className="mb-4 flex items-center justify-between">
               <h3 className="text-lg font-bold">{t("projects.edit")}</h3>
               <button
@@ -248,6 +252,7 @@ export function ProjectActionsMenu({
                 </button>
               </div>
             </form>
+            </div>
           </div>
         </div>
       )}

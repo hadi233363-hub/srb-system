@@ -58,10 +58,14 @@ export function NewProjectButton({ users }: { users: User[] }) {
 
       {open && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+          className="fixed inset-0 z-50 overflow-y-auto bg-black/60"
           onClick={(e) => e.target === e.currentTarget && setOpen(false)}
         >
-          <div className="w-full max-w-lg rounded-2xl border border-zinc-800 bg-zinc-900 p-5 shadow-2xl">
+          <div
+            className="flex min-h-full items-center justify-center p-4"
+            onClick={(e) => e.target === e.currentTarget && setOpen(false)}
+          >
+            <div className="my-4 w-full max-w-lg rounded-2xl border border-zinc-800 bg-zinc-900 p-5 shadow-2xl">
             <div className="mb-4 flex items-center justify-between">
               <h3 className="text-lg font-bold">{t("projects.new.title")}</h3>
               <button
@@ -100,6 +104,14 @@ export function NewProjectButton({ users }: { users: User[] }) {
                 <input
                   name="brandName"
                   placeholder={t("projects.field.brandPlaceholder")}
+                  className="w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 focus:border-emerald-500/50 focus:outline-none"
+                />
+              </Field>
+              <Field label={t("projects.field.clientPhone")}>
+                <input
+                  name="clientPhone"
+                  dir="ltr"
+                  placeholder={t("projects.field.clientPhonePlaceholder")}
                   className="w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 focus:border-emerald-500/50 focus:outline-none"
                 />
               </Field>
@@ -275,6 +287,7 @@ export function NewProjectButton({ users }: { users: User[] }) {
                 </button>
               </div>
             </form>
+            </div>
           </div>
         </div>
       )}

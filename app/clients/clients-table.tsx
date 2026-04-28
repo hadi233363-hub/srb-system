@@ -252,10 +252,14 @@ function NewClientModal({ onClose }: { onClose: () => void }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+      className="fixed inset-0 z-50 overflow-y-auto bg-black/60"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-900 p-5 shadow-2xl">
+      <div
+        className="flex min-h-full items-center justify-center p-4"
+        onClick={(e) => e.target === e.currentTarget && onClose()}
+      >
+        <div className="my-4 w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-900 p-5 shadow-2xl">
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-lg font-bold">{t("clients.action.new")}</h3>
           <button onClick={onClose} className="text-zinc-500 hover:text-zinc-300">
@@ -328,6 +332,7 @@ function NewClientModal({ onClose }: { onClose: () => void }) {
             </button>
           </div>
         </form>
+        </div>
       </div>
     </div>
   );
