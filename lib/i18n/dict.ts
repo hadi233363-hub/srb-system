@@ -86,6 +86,11 @@ export const DICT: Record<string, { ar: string; en: string }> = {
   "kpi.openTasks": { ar: "مهام مفتوحة", en: "Open tasks" },
   "kpi.overdueTasks": { ar: "مهام متأخرة", en: "Overdue tasks" },
   "kpi.teamSize": { ar: "الفريق", en: "Team" },
+  "kpi.activeContracts": { ar: "قيمة العقود النشطة", en: "Active contracts" },
+  "kpi.activeContractsSub": {
+    ar: "إجمالي ميزانيات المشاريع النشطة",
+    en: "Sum of active project budgets",
+  },
   "kpi.revenue30": { ar: "إيرادات (30ي)", en: "Revenue (30d)" },
   "kpi.net30": { ar: "صافي (30ي)", en: "Net (30d)" },
 
@@ -1454,6 +1459,8 @@ export const DICT: Record<string, { ar: string; en: string }> = {
   "clients.col.phone": { ar: "رقم الهاتف", en: "Phone" },
   "clients.col.projectsCount": { ar: "عدد المشاريع", en: "Projects" },
   "clients.col.totalRevenue": { ar: "إجمالي الإيرادات", en: "Total revenue" },
+  "clients.col.contractValue": { ar: "قيمة العقود", en: "Contract value" },
+  "clients.col.paidRevenue": { ar: "المدفوع", en: "Collected" },
   "clients.col.lastProject": { ar: "آخر مشروع", en: "Last project" },
   "clients.col.joinedAt": { ar: "تاريخ الانضمام", en: "Joined" },
   "clients.field.name": { ar: "الاسم", en: "Name" },
@@ -1470,6 +1477,7 @@ export const DICT: Record<string, { ar: string; en: string }> = {
   "clients.detail.profile": { ar: "بيانات العميل", en: "Client info" },
   "clients.detail.projects": { ar: "مشاريع العميل", en: "Projects" },
   "clients.detail.summary": { ar: "ملخص مالي", en: "Financial summary" },
+  "clients.detail.contractValue": { ar: "قيمة العقود", en: "Contract value" },
   "clients.detail.totalPaid": { ar: "إجمالي المدفوع", en: "Total paid" },
   "clients.detail.completedCount": { ar: "مشاريع مكتملة", en: "Completed projects" },
   "clients.detail.activeCount": { ar: "مشاريع نشطة", en: "Active projects" },

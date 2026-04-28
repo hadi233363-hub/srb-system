@@ -22,7 +22,8 @@ interface Row {
   phone: string | null;
   email: string | null;
   projectsCount: number;
-  totalRevenue: number;
+  paidRevenue: number;
+  contractValue: number;
   lastProjectTitle: string | null;
   lastProjectAt: Date | string | null;
   joinedAt: Date | string;
@@ -123,7 +124,8 @@ export function ClientsTable({ rows, canCreate, locale, emptyAddOnly }: Props) {
               <Th>{t("clients.col.brand")}</Th>
               <Th>{t("clients.col.phone")}</Th>
               <Th align="end">{t("clients.col.projectsCount")}</Th>
-              <Th align="end">{t("clients.col.totalRevenue")}</Th>
+              <Th align="end">{t("clients.col.contractValue")}</Th>
+              <Th align="end">{t("clients.col.paidRevenue")}</Th>
               <Th>{t("clients.col.lastProject")}</Th>
               <Th>{t("clients.col.joinedAt")}</Th>
             </tr>
@@ -180,8 +182,13 @@ export function ClientsTable({ rows, canCreate, locale, emptyAddOnly }: Props) {
                   {r.projectsCount}
                 </td>
                 <td className="px-3 py-2 text-end tabular-nums text-emerald-400">
-                  {r.totalRevenue > 0
-                    ? formatQar(r.totalRevenue, { locale })
+                  {r.contractValue > 0
+                    ? formatQar(r.contractValue, { locale })
+                    : <span className="text-zinc-600">—</span>}
+                </td>
+                <td className="px-3 py-2 text-end tabular-nums text-sky-400">
+                  {r.paidRevenue > 0
+                    ? formatQar(r.paidRevenue, { locale })
                     : <span className="text-zinc-600">—</span>}
                 </td>
                 <td className="px-3 py-2 text-zinc-400">
@@ -203,7 +210,7 @@ export function ClientsTable({ rows, canCreate, locale, emptyAddOnly }: Props) {
             ))}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={8} className="px-3 py-8 text-center text-sm text-zinc-500">
+                <td colSpan={9} className="px-3 py-8 text-center text-sm text-zinc-500">
                   {q ? t("clients.combobox.noResults") : t("clients.empty.title")}
                 </td>
               </tr>

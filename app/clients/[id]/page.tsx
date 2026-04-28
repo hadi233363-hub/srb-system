@@ -82,6 +82,12 @@ export default async function ClientDetailPage(props: {
   if (!client) notFound();
 
   // Aggregates for the summary footer + per-project remaining column.
+  // contractValue = sum of agreed budgets across the client's projects.
+  // Surfaces the moment a project is created so the team has an honest
+  // "this client is worth X" number even before any invoice is recorded.
+  // totalPaid = actual money collected (sum of income transactions). Stays
+  // at 0 until someone records an invoice.
+  const contractValue = client.projects.reduce((sum, p) => sum + p.budgetQar, 0);
   const totalPaid = client.projects.reduce(
     (sum, p) => sum + p.transactions.reduce((a, t) => a + t.amountQar, 0),
     0
@@ -118,7 +124,7 @@ export default async function ClientDetailPage(props: {
                 <span className="text-zinc-300">{client.brandName} · </span>
               )}
               {client.projects.length} {t("clients.col.projectsCount")} ·{" "}
-              {totalPaid > 0 ? formatQar(totalPaid, { locale }) : "—"}
+              {contractValue > 0 ? formatQar(contractValue, { locale }) : "—"}
             </p>
           </div>
         </div>
@@ -237,16 +243,21 @@ export default async function ClientDetailPage(props: {
         <h2 className="mb-3 text-sm font-semibold text-zinc-300">
           {t("clients.detail.summary")}
         </h2>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <SummaryCard
+            label={t("clients.detail.contractValue")}
+            value={contractValue > 0 ? formatQar(contractValue, { locale }) : "—"}
+            tone="emerald"
+          />
           <SummaryCard
             label={t("clients.detail.totalPaid")}
             value={totalPaid > 0 ? formatQar(totalPaid, { locale }) : "—"}
-            tone="emerald"
+            tone="sky"
           />
           <SummaryCard
             label={t("clients.detail.completedCount")}
             value={String(completedCount)}
-            tone="sky"
+            tone="amber"
           />
           <SummaryCard
             label={t("clients.detail.activeCount")}

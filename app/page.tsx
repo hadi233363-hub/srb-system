@@ -47,6 +47,7 @@ export default async function OverviewPage() {
     teamSize,
     last30dIncome,
     last30dExpense,
+    activeContractsAggregate,
   ] = await Promise.all([
     prisma.project.count({ where: { status: "active" } }),
     prisma.task.count(),
@@ -72,11 +73,22 @@ export default async function OverviewPage() {
           _sum: { amountQar: true },
         })
       : Promise.resolve({ _sum: { amountQar: 0 } as { amountQar: number | null } }),
+    // Active contracts value — sum of budgetQar across every project still in
+    // `active` state. Computed live so a freshly added project bumps the
+    // owner's portfolio number immediately, no transactions required. Owner-
+    // only because budget data is sensitive pricing info.
+    isAdmin
+      ? prisma.project.aggregate({
+          where: { status: "active" },
+          _sum: { budgetQar: true },
+        })
+      : Promise.resolve({ _sum: { budgetQar: 0 } as { budgetQar: number | null } }),
   ]);
 
   const revenue = last30dIncome._sum.amountQar ?? 0;
   const expenses = last30dExpense._sum.amountQar ?? 0;
   const net = revenue - expenses;
+  const activeContractsValue = activeContractsAggregate._sum.budgetQar ?? 0;
   const isEmpty = activeProjects === 0 && allTasks === 0 && teamSize <= 1;
 
   // ---------------------------------------------------------------------
@@ -213,7 +225,7 @@ export default async function OverviewPage() {
       <div
         className={cn(
           "grid grid-cols-2 gap-4 sm:grid-cols-3",
-          isAdmin ? "lg:grid-cols-6" : "lg:grid-cols-4"
+          isAdmin ? "lg:grid-cols-7" : "lg:grid-cols-4"
         )}
       >
         <KpiCard
@@ -242,6 +254,13 @@ export default async function OverviewPage() {
         />
         {isAdmin && (
           <>
+            <KpiCard
+              label={t("kpi.activeContracts")}
+              value={formatQar(activeContractsValue, locale)}
+              tone={activeContractsValue > 0 ? "positive" : "default"}
+              sub={t("kpi.activeContractsSub")}
+              icon={Briefcase}
+            />
             <KpiCard
               label={t("kpi.revenue30")}
               value={formatQar(revenue, locale)}
