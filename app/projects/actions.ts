@@ -11,6 +11,7 @@ import {
   safeString,
   MAX_LONG_TEXT,
   MAX_NAME_LEN,
+  MAX_SHORT_TEXT,
   MAX_TITLE_LEN,
 } from "@/lib/input-limits";
 import {
@@ -26,12 +27,14 @@ export async function createProjectAction(formData: FormData) {
   let title: string | null;
   let clientName: string | null;
   let brandName: string | null;
+  let clientPhone: string | null;
   let description: string | null;
   let budgetQar: number;
   try {
     title = safeString(formData.get("title"), MAX_TITLE_LEN);
     clientName = safeString(formData.get("clientName"), MAX_NAME_LEN);
     brandName = safeString(formData.get("brandName"), MAX_NAME_LEN);
+    clientPhone = safeString(formData.get("clientPhone"), MAX_SHORT_TEXT);
     description = safeString(formData.get("description"), MAX_LONG_TEXT);
     budgetQar = safeAmount(formData.get("budgetQar"));
   } catch (err) {
@@ -65,24 +68,29 @@ export async function createProjectAction(formData: FormData) {
     clientId = exists?.id ?? null;
   }
   if (!clientId && clientName) {
-    const c = await findOrCreateClientByName(clientName);
+    // Pass the supplied phone through so a brand-new client gets it stamped
+    // on creation rather than being orphaned without contact info.
+    const c = await findOrCreateClientByName(clientName, { phone: clientPhone });
     clientId = c?.id ?? null;
   }
 
-  // Brand sync — if a brand was supplied AND the linked client doesn't have
-  // one yet, copy it over. Never overwrite an existing client brand: that
-  // would let any project entry rewrite the agency's brand record. The
-  // explicit way to change a client's brand is on the /clients/[id] form.
-  if (clientId && brandName) {
+  // Sync brand + phone onto the client. Both follow the same rule: only
+  // fill if the client doesn't already have a value. Never overwrite —
+  // the explicit way to change a client's brand or phone is on the
+  // /clients/[id] form. This prevents project entry from accidentally
+  // erasing the agency's CRM record when a typo happens in the form.
+  if (clientId && (brandName || clientPhone)) {
     const existing = await prisma.client.findUnique({
       where: { id: clientId },
-      select: { brandName: true },
+      select: { brandName: true, phone: true },
     });
-    if (existing && !existing.brandName) {
-      await prisma.client.update({
-        where: { id: clientId },
-        data: { brandName },
-      });
+    if (existing) {
+      const updates: { brandName?: string; phone?: string } = {};
+      if (brandName && !existing.brandName) updates.brandName = brandName;
+      if (clientPhone && !existing.phone) updates.phone = clientPhone;
+      if (Object.keys(updates).length > 0) {
+        await prisma.client.update({ where: { id: clientId }, data: updates });
+      }
     }
   }
 

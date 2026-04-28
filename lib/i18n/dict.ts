@@ -994,6 +994,11 @@ export const DICT: Record<string, { ar: string; en: string }> = {
     ar: "مثال: SRB Agency، مطعم الشرق...",
     en: "e.g. SRB Agency, Al-Sharq Restaurant...",
   },
+  "projects.field.clientPhone": { ar: "رقم جوال العميل", en: "Client phone" },
+  "projects.field.clientPhonePlaceholder": {
+    ar: "+974 5xxx xxxx",
+    en: "+974 5xxx xxxx",
+  },
   "projects.field.type": { ar: "النوع", en: "Type" },
   "projects.field.priority": { ar: "الأولوية", en: "Priority" },
   "projects.field.budget": { ar: "الميزانية (ر.ق)", en: "Budget (QAR)" },
