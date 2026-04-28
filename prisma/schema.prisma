@@ -302,7 +302,14 @@ model Client {
   phone     String?
   notes     String?
   createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  // @default(now()) is required so `prisma db push` can backfill existing
+  // rows when the column is added to a non-empty production database. Prisma
+  // emits `DEFAULT CURRENT_TIMESTAMP` at the SQL level for SQLite, which the
+  // ALTER TABLE ADD COLUMN step needs to satisfy NOT NULL on existing rows.
+  // Without it, `db push` errors with "Added the required column updatedAt
+  // ... without a default value" and the start script (db push && next start)
+  // never reaches `next start`, taking the whole deploy down.
+  updatedAt DateTime  @default(now()) @updatedAt
   projects  Project[]
 
   @@index([name])
