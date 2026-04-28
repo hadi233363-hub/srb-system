@@ -34,6 +34,7 @@ export const MODULES = [
   "package",
   "assets",
   "clientDelivery",
+  "clients",
   "freelancers",
   "shoots",
   "meetings",
@@ -114,6 +115,12 @@ export const MODULE_SPECS: readonly ModuleSpec[] = [
     labelAr: "تسليم العميل",
     labelEn: "Client delivery",
     actions: ["view", "create", "edit", "delete", "approve"],
+  },
+  {
+    key: "clients",
+    labelAr: "العملاء",
+    labelEn: "Clients",
+    actions: ["view", "create", "edit", "delete"],
   },
   {
     key: "freelancers",
@@ -252,6 +259,11 @@ const MANAGER_PERMS: PermissionSet = new Set<Permission>([
   p("clientDelivery", "edit"),
   p("clientDelivery", "delete"),
   p("clientDelivery", "approve"),
+  // Clients (CRM)
+  p("clients", "view"),
+  p("clients", "create"),
+  p("clients", "edit"),
+  p("clients", "delete"),
   // Freelancers — full control for manager (records payments).
   p("freelancers", "view"),
   p("freelancers", "create"),
@@ -315,6 +327,11 @@ const DEPT_LEAD_PERMS: PermissionSet = new Set<Permission>([
   p("clientDelivery", "view"),
   p("clientDelivery", "create"),
   p("clientDelivery", "edit"),
+  // Clients — dept lead manages the CRM for the projects they run;
+  // delete is held back to manager+ to keep the company's contact book stable.
+  p("clients", "view"),
+  p("clients", "create"),
+  p("clients", "edit"),
   // Dept lead can hire and edit freelancers in their dept; "approve"
   // (= mark a payment as paid) stays manager+ to keep money moves locked.
   p("freelancers", "view"),
@@ -342,6 +359,7 @@ const EMPLOYEE_PERMS: PermissionSet = new Set<Permission>([
   p("package", "view"),
   p("assets", "view"),
   p("clientDelivery", "view"),
+  p("clients", "view"),
   p("shoots", "view"),
   p("meetings", "view"),
   p("equipment", "view"),

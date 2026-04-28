@@ -7,6 +7,7 @@ import { cn } from "@/lib/cn";
 import { createProjectAction } from "./actions";
 import { useLocale, useT } from "@/lib/i18n/client";
 import { PHASE_TEMPLATES } from "@/lib/projects/phase-templates";
+import { ClientCombobox } from "@/components/projects/client-combobox";
 
 interface User {
   id: string;
@@ -91,10 +92,8 @@ export function NewProjectButton({ users }: { users: User[] }) {
                 />
               </Field>
               <Field label={t("projects.field.client")}>
-                <input
-                  name="clientName"
+                <ClientCombobox
                   placeholder={t("projects.field.clientPlaceholder")}
-                  className="w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 focus:border-emerald-500/50 focus:outline-none"
                 />
               </Field>
               <Field label={t("projects.field.type")}>

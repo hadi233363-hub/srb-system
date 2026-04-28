@@ -284,6 +284,17 @@ model UserBadge {
   @@index([userId])
 }
 
+// ---------------------------------------------------------------------------
+// Client (العميل) — the buyer side of the agency. One client can hold many
+// projects (one-to-many via Project.clientId). Auto-created in
+// app/projects/actions.ts when a project's clientName field is a new name —
+// existing names re-use the row, so we never end up with duplicates from
+// a typo in the project form.
+//
+// Indexes on name + phone keep the /clients search snappy at the
+// 1k-row scale the system is sized for. Sorting on the list page is
+// handled by joining latest project createdAt — see app/clients/page.tsx.
+// ---------------------------------------------------------------------------
 model Client {
   id        String    @id @default(cuid())
   name      String
@@ -291,7 +302,11 @@ model Client {
   phone     String?
   notes     String?
   createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
   projects  Project[]
+
+  @@index([name])
+  @@index([phone])
 }
 
 model Project {

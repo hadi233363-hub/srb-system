@@ -18,6 +18,7 @@ import {
   templatePhaseNames,
   type Locale as TemplateLocale,
 } from "@/lib/projects/phase-templates";
+import { findOrCreateClientByName } from "@/app/clients/actions";
 
 export async function createProjectAction(formData: FormData) {
   const user = await requireDeptLeadOrAbove();
@@ -49,15 +50,21 @@ export async function createProjectAction(formData: FormData) {
     return { ok: false, message: "نوع التسعير غير صحيح" };
   }
 
+  // Auto-link or auto-create the client. If the form supplied an existing
+  // clientId (combobox pick), prefer that — it skips name normalization and
+  // avoids duplicating "Aspire" because the user typed "aspire ".
   let clientId: string | null = null;
-  if (clientName) {
-    const existing = await prisma.client.findFirst({ where: { name: clientName } });
-    if (existing) {
-      clientId = existing.id;
-    } else {
-      const newClient = await prisma.client.create({ data: { name: clientName } });
-      clientId = newClient.id;
-    }
+  const explicitClientId = (formData.get("clientId") as string | null) || null;
+  if (explicitClientId) {
+    const exists = await prisma.client.findUnique({
+      where: { id: explicitClientId },
+      select: { id: true },
+    });
+    clientId = exists?.id ?? null;
+  }
+  if (!clientId && clientName) {
+    const c = await findOrCreateClientByName(clientName);
+    clientId = c?.id ?? null;
   }
 
   // For monthly projects, schedule the first invoice exactly one cycle after
