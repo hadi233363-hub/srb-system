@@ -9,6 +9,7 @@ import { deleteClientAction, updateClientAction } from "./actions";
 
 interface Initial {
   name: string;
+  brandName: string | null;
   phone: string | null;
   email: string | null;
   notes: string | null;
@@ -83,6 +84,18 @@ export function ClientProfileForm({ id, initial, canEdit, canDelete }: Props) {
             required
             defaultValue={initial.name}
             disabled={!canEdit}
+            className={cn(
+              "w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 focus:border-emerald-500/50 focus:outline-none",
+              !canEdit && "opacity-60"
+            )}
+          />
+        </Field>
+        <Field label={t("clients.field.brand")}>
+          <input
+            name="brandName"
+            defaultValue={initial.brandName ?? ""}
+            disabled={!canEdit}
+            placeholder={t("clients.field.brandPlaceholder")}
             className={cn(
               "w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 focus:border-emerald-500/50 focus:outline-none",
               !canEdit && "opacity-60"

@@ -25,11 +25,13 @@ export async function createProjectAction(formData: FormData) {
 
   let title: string | null;
   let clientName: string | null;
+  let brandName: string | null;
   let description: string | null;
   let budgetQar: number;
   try {
     title = safeString(formData.get("title"), MAX_TITLE_LEN);
     clientName = safeString(formData.get("clientName"), MAX_NAME_LEN);
+    brandName = safeString(formData.get("brandName"), MAX_NAME_LEN);
     description = safeString(formData.get("description"), MAX_LONG_TEXT);
     budgetQar = safeAmount(formData.get("budgetQar"));
   } catch (err) {
@@ -67,6 +69,23 @@ export async function createProjectAction(formData: FormData) {
     clientId = c?.id ?? null;
   }
 
+  // Brand sync — if a brand was supplied AND the linked client doesn't have
+  // one yet, copy it over. Never overwrite an existing client brand: that
+  // would let any project entry rewrite the agency's brand record. The
+  // explicit way to change a client's brand is on the /clients/[id] form.
+  if (clientId && brandName) {
+    const existing = await prisma.client.findUnique({
+      where: { id: clientId },
+      select: { brandName: true },
+    });
+    if (existing && !existing.brandName) {
+      await prisma.client.update({
+        where: { id: clientId },
+        data: { brandName },
+      });
+    }
+  }
+
   // For monthly projects, schedule the first invoice exactly one cycle after
   // the project is entered. Each subsequent cycle advances from the date the
   // invoice is actually recorded (see recordInvoiceAction).
@@ -80,6 +99,7 @@ export async function createProjectAction(formData: FormData) {
     data: {
       title,
       clientId,
+      brandName,
       type,
       priority,
       budgetQar,
@@ -154,6 +174,7 @@ export async function updateProjectAction(id: string, formData: FormData) {
 
   let title: string | null;
   let description: string | null | undefined;
+  let brandName: string | null | undefined;
   let budgetQar: number | undefined;
   try {
     title = safeString(formData.get("title"), MAX_TITLE_LEN);
@@ -162,6 +183,8 @@ export async function updateProjectAction(id: string, formData: FormData) {
       rawDescription === null
         ? undefined
         : safeString(rawDescription, MAX_LONG_TEXT);
+    const rawBrand = formData.get("brandName");
+    brandName = rawBrand === null ? undefined : safeString(rawBrand, MAX_NAME_LEN);
     const budgetRaw = formData.get("budgetQar");
     budgetQar = budgetRaw === null ? undefined : safeAmount(budgetRaw);
   } catch (err) {
@@ -179,6 +202,12 @@ export async function updateProjectAction(id: string, formData: FormData) {
   const progressRaw = formData.get("progressPct") as string | null;
   const progressPct = progressRaw ? parseInt(progressRaw) : undefined;
   const billingType = formData.get("billingType") as string | null;
+  // `type` is one of the eight known values (or empty/—). We accept any
+  // non-empty string so a future type added in the schema doesn't need a
+  // code change here, but treat empty as "clear it".
+  const typeRaw = formData.get("type");
+  const typeUpdate: string | null | undefined =
+    typeRaw === null ? undefined : typeRaw === "" ? null : String(typeRaw);
 
   const before = await prisma.project.findUnique({ where: { id } });
 
@@ -191,6 +220,8 @@ export async function updateProjectAction(id: string, formData: FormData) {
       ...(budgetQar !== undefined ? { budgetQar } : {}),
       ...(deadlineAt !== undefined ? { deadlineAt } : {}),
       ...(description !== undefined ? { description } : {}),
+      ...(brandName !== undefined ? { brandName } : {}),
+      ...(typeUpdate !== undefined ? { type: typeUpdate } : {}),
       ...(progressPct !== undefined && !isNaN(progressPct)
         ? { progressPct: Math.max(0, Math.min(100, progressPct)) }
         : {}),
@@ -200,6 +231,21 @@ export async function updateProjectAction(id: string, formData: FormData) {
       ...(status === "completed" ? { completedAt: new Date() } : {}),
     },
   });
+
+  // Brand sync — if the user just set the project's brand AND the linked
+  // client has no brand yet, propagate it to the client. Never overwrites.
+  if (brandName && updated.clientId) {
+    const c = await prisma.client.findUnique({
+      where: { id: updated.clientId },
+      select: { brandName: true },
+    });
+    if (c && !c.brandName) {
+      await prisma.client.update({
+        where: { id: updated.clientId },
+        data: { brandName },
+      });
+    }
+  }
 
   if (before && status && status !== before.status) {
     await logAudit({

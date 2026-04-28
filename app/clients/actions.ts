@@ -113,11 +113,13 @@ export async function createClientAction(formData: FormData): Promise<ClientResu
   await requirePermission("clients", "create");
 
   let name: string | null;
+  let brandName: string | null;
   let phone: string | null;
   let email: string | null;
   let notes: string | null;
   try {
     name = safeString(formData.get("name"), MAX_NAME_LEN);
+    brandName = safeString(formData.get("brandName"), MAX_NAME_LEN);
     phone = safeString(formData.get("phone"), MAX_SHORT_TEXT);
     email = safeString(formData.get("email"), MAX_SHORT_TEXT);
     notes = safeString(formData.get("notes"), MAX_LONG_TEXT);
@@ -137,13 +139,17 @@ export async function createClientAction(formData: FormData): Promise<ClientResu
   }
 
   const client = await prisma.client.create({
-    data: { name, phone, email, notes },
+    data: { name, brandName, phone, email, notes },
   });
 
   await logAudit({
     action: "client.create",
     target: { type: "client", id: client.id, label: client.name },
-    metadata: { phone: client.phone ?? null, email: client.email ?? null },
+    metadata: {
+      brandName: client.brandName ?? null,
+      phone: client.phone ?? null,
+      email: client.email ?? null,
+    },
   });
 
   revalidatePath("/clients");
@@ -160,11 +166,13 @@ export async function updateClientAction(
   await requirePermission("clients", "edit");
 
   let name: string | null;
+  let brandName: string | null;
   let phone: string | null;
   let email: string | null;
   let notes: string | null;
   try {
     name = safeString(formData.get("name"), MAX_NAME_LEN);
+    brandName = safeString(formData.get("brandName"), MAX_NAME_LEN);
     phone = safeString(formData.get("phone"), MAX_SHORT_TEXT);
     email = safeString(formData.get("email"), MAX_SHORT_TEXT);
     notes = safeString(formData.get("notes"), MAX_LONG_TEXT);
@@ -178,15 +186,25 @@ export async function updateClientAction(
 
   const updated = await prisma.client.update({
     where: { id },
-    data: { name, phone, email, notes },
+    data: { name, brandName, phone, email, notes },
   });
 
   await logAudit({
     action: "client.update",
     target: { type: "client", id: updated.id, label: updated.name },
     metadata: {
-      before: { name: before.name, phone: before.phone, email: before.email },
-      after: { name: updated.name, phone: updated.phone, email: updated.email },
+      before: {
+        name: before.name,
+        brandName: before.brandName,
+        phone: before.phone,
+        email: before.email,
+      },
+      after: {
+        name: updated.name,
+        brandName: updated.brandName,
+        phone: updated.phone,
+        email: updated.email,
+      },
     },
   });
 
