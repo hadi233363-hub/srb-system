@@ -53,6 +53,8 @@ export default async function ClientsPage() {
           status: true,
           createdAt: true,
           startedAt: true,
+          budgetQar: true,
+          billingType: true,
           transactions: {
             where: { kind: "income" },
             select: { amountQar: true },
@@ -69,11 +71,27 @@ export default async function ClientsPage() {
   // and the active/finished status here (server) so the client never sees
   // raw transaction rows. Status is a pure derivation of project states —
   // never persisted, always recomputed from the source of truth.
+  //
+  // Two revenue numbers per client:
+  //   - paidRevenue:    money actually collected (sum of income transactions
+  //                     linked to the client's projects). Honest dollar figure
+  //                     for finance reconciliation, but starts at 0 for any
+  //                     project that hasn't had its first invoice recorded.
+  //   - contractValue:  agreed budget across the client's projects (one-time
+  //                     budgets stay as-is; monthly budgets count as the
+  //                     monthly amount, since extending across N months would
+  //                     be guesswork). Surfaces immediately when a project is
+  //                     created — what the team usually means when asking
+  //                     "how much is this client worth?".
+  // The list page leads with contractValue so a fresh project shows real
+  // numbers right away; paidRevenue is still available on the profile page
+  // for the bookkeeping view.
   const rows = clients.map((c) => {
-    const totalRevenue = c.projects.reduce(
+    const paidRevenue = c.projects.reduce(
       (sum, p) => sum + p.transactions.reduce((a, t) => a + t.amountQar, 0),
       0
     );
+    const contractValue = c.projects.reduce((sum, p) => sum + p.budgetQar, 0);
     const last = c.projects[0];
     const first = c.projects[c.projects.length - 1];
     // "Active" = at least one project still in `active` state. Anything else
@@ -86,7 +104,8 @@ export default async function ClientsPage() {
       phone: c.phone,
       email: c.email,
       projectsCount: c.projects.length,
-      totalRevenue,
+      paidRevenue,
+      contractValue,
       lastProjectTitle: last?.title ?? null,
       lastProjectAt: (last?.createdAt ?? null) as Date | null,
       joinedAt: (first?.createdAt ?? c.createdAt) as Date,
