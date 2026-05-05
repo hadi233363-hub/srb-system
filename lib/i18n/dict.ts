@@ -412,6 +412,16 @@ export const DICT: Record<string, { ar: string; en: string }> = {
   "projectStatus.cancelled": { ar: "ملغي", en: "Cancelled" },
 
   // Project type
+  "projectType.social_media": { ar: "إدارة تواصل اجتماعي", en: "Social media management" },
+  "pkg.sectionTitle": { ar: "تفاصيل الباقة الشهرية", en: "Monthly package details" },
+  "pkg.posts": { ar: "بوست", en: "Posts" },
+  "pkg.reels": { ar: "ريل", en: "Reels" },
+  "pkg.videos": { ar: "فيديو", en: "Videos" },
+  "pkg.shoots": { ar: "تصوير", en: "Shoots" },
+  "pkg.stories": { ar: "ستوري", en: "Stories" },
+  "pkg.perMonth": { ar: "/شهر", en: "/mo" },
+  "pkg.hint": { ar: "يمكنك تعديلها لاحقاً من صفحة المشروع", en: "You can edit these later from the project page" },
+  "pkg.summary": { ar: "الباقة:", en: "Package:" },
   "projectType.video": { ar: "فيديو", en: "Video" },
   "projectType.photo": { ar: "تصوير", en: "Photo" },
   "projectType.event": { ar: "فعالية", en: "Event" },

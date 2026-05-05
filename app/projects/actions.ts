@@ -120,6 +120,23 @@ export async function createProjectAction(formData: FormData) {
     },
   });
 
+  // If type is social_media and package counts were supplied, seed the package.
+  if (type === "social_media") {
+    const pkgKeys = ["Posts", "Reels", "Videos", "Shoots", "Stories"] as const;
+    const pkgData: Record<string, number> = {};
+    let hasAny = false;
+    for (const k of pkgKeys) {
+      const v = safeInt(formData.get(`pkg_target${k}`), 0, 0, 999);
+      pkgData[`target${k}`] = v;
+      if (v > 0) hasAny = true;
+    }
+    if (hasAny) {
+      await prisma.projectPackage.create({
+        data: { projectId: project.id, ...pkgData },
+      });
+    }
+  }
+
   // If the user picked a starter phase template, seed the phases now.
   const templateKey = (formData.get("phaseTemplate") as string | null) || null;
   const localeRaw = (formData.get("locale") as string | null) || "ar";

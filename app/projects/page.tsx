@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AlertCircle, Briefcase, Repeat, Users } from "lucide-react";
+import { AlertCircle, Briefcase, Camera, Film, Image as ImageIcon, Layers, Repeat, Users, Video } from "lucide-react";
 import { prisma } from "@/lib/db/prisma";
 import { auth } from "@/auth";
 import {
@@ -26,6 +26,20 @@ export default async function ProjectsPage() {
       include: {
         client: true,
         lead: { select: { id: true, name: true, email: true } },
+        package: {
+          select: {
+            targetPosts: true,
+            targetReels: true,
+            targetVideos: true,
+            targetShoots: true,
+            targetStories: true,
+            completedPosts: true,
+            completedReels: true,
+            completedVideos: true,
+            completedShoots: true,
+            completedStories: true,
+          },
+        },
         _count: {
           select: { members: true, tasks: true },
         },
@@ -98,6 +112,44 @@ export default async function ProjectsPage() {
                     {p.description}
                   </p>
                 )}
+
+                {/* Social media package chips */}
+                {p.type === "social_media" && p.package && (() => {
+                  const pkg = p.package;
+                  const items = [
+                    { icon: ImageIcon, done: pkg.completedPosts,   target: pkg.targetPosts,   labelAr: "بوست",   labelEn: "Posts" },
+                    { icon: Film,      done: pkg.completedReels,   target: pkg.targetReels,   labelAr: "ريل",    labelEn: "Reels" },
+                    { icon: Video,     done: pkg.completedVideos,  target: pkg.targetVideos,  labelAr: "فيديو",  labelEn: "Videos" },
+                    { icon: Camera,    done: pkg.completedShoots,  target: pkg.targetShoots,  labelAr: "تصوير",  labelEn: "Shoots" },
+                    { icon: Layers,    done: pkg.completedStories, target: pkg.targetStories, labelAr: "ستوري",  labelEn: "Stories" },
+                  ].filter((x) => x.target > 0);
+                  if (items.length === 0) return null;
+                  return (
+                    <div className="mb-3 flex flex-wrap gap-1.5">
+                      {items.map((item) => {
+                        const Icon = item.icon;
+                        const completed = item.done >= item.target;
+                        return (
+                          <span
+                            key={item.labelEn}
+                            className={cn(
+                              "flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px]",
+                              completed
+                                ? "bg-emerald-500/10 text-emerald-300"
+                                : "bg-sky-500/10 text-sky-300"
+                            )}
+                          >
+                            <Icon className="h-2.5 w-2.5" />
+                            {locale === "ar" ? item.labelAr : item.labelEn}
+                            <span className="tabular-nums">
+                              {item.done}/{item.target}
+                            </span>
+                          </span>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
 
                 {/* Progress */}
                 <div className="mb-3">
