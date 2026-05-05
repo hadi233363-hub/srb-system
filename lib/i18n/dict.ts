@@ -1601,6 +1601,12 @@ export const DICT: Record<string, { ar: string; en: string }> = {
   "smartEdit.copy": { ar: "نسخ", en: "Copy" },
   "smartEdit.copied": { ar: "تم النسخ", en: "Copied!" },
   "smartEdit.hint": { ar: "الصق هذا البروبت مباشرة في Claude Code", en: "Paste this prompt directly into Claude Code" },
+  "smartEdit.type.ui": { ar: "الواجهة", en: "UI / Interface" },
+  "smartEdit.type.ui.desc": { ar: "شكل وتصميم الصفحات — ألوان، أزرار، جداول، ترتيب العناصر، نصوص", en: "Visual design — colors, buttons, tables, layout, text" },
+  "smartEdit.type.sections": { ar: "الأقسام", en: "Features / Logic" },
+  "smartEdit.type.sections.desc": { ar: "إضافة ميزة أو تعديلها — server actions، صلاحيات، منطق الأعمال، تحقق", en: "Features, server actions, permissions, business logic" },
+  "smartEdit.type.database": { ar: "قاعدة البيانات", en: "Database / Schema" },
+  "smartEdit.type.database.desc": { ar: "تعديل جداول البيانات — إضافة حقول أو موديلات أو علاقات جديدة", en: "Schema changes — tables, fields, relations in Prisma" },
 };
 
 /** Translate a key into a given locale. Falls back to English if key missing. */

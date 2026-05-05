@@ -1,101 +1,263 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Copy, Wand2 } from "lucide-react";
+import { Check, Copy, Database, Layers, Monitor, Wand2 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { useT } from "@/lib/i18n/client";
 import type { Locale } from "@/lib/i18n/dict";
 
-const EDIT_TYPES = ["ui", "logic", "database"] as const;
+const EDIT_TYPES = ["ui", "sections", "database"] as const;
 type EditType = (typeof EDIT_TYPES)[number];
 
-const TYPE_LABELS: Record<EditType, { ar: string; en: string }> = {
-  ui:       { ar: "واجهة المستخدم",   en: "UI / Interface" },
-  logic:    { ar: "منطق تطبيقي",       en: "App Logic" },
-  database: { ar: "قاعدة البيانات",    en: "Database / Schema" },
+interface TypeConfig {
+  labelKey: string;
+  descKey: string;
+  icon: React.ElementType;
+  color: "sky" | "amber" | "emerald";
+}
+
+const TYPE_CONFIG: Record<EditType, TypeConfig> = {
+  ui: {
+    labelKey: "smartEdit.type.ui",
+    descKey: "smartEdit.type.ui.desc",
+    icon: Monitor,
+    color: "sky",
+  },
+  sections: {
+    labelKey: "smartEdit.type.sections",
+    descKey: "smartEdit.type.sections.desc",
+    icon: Layers,
+    color: "amber",
+  },
+  database: {
+    labelKey: "smartEdit.type.database",
+    descKey: "smartEdit.type.database.desc",
+    icon: Database,
+    color: "emerald",
+  },
 };
 
-const TYPE_CONTEXT: Record<EditType, string> = {
-  ui: `This is a UI/frontend change. Focus on:
-- React/Next.js components (app router, server & client components)
-- Tailwind CSS styling and responsive design
-- Accessibility and user experience
-- Component state management
-- The project uses Next.js 16, React 19, Tailwind CSS v4, TypeScript, and Lucide icons.`,
-
-  logic: `This is an application logic change. Focus on:
-- Next.js server actions ("use server")
-- Data fetching and mutations with Prisma ORM
-- Authentication and authorization (next-auth v5, role-based guards)
-- Business logic, validations, and error handling
-- The project uses TypeScript, Prisma with SQLite (better-sqlite3), and next-auth.`,
-
-  database: `This is a database/schema change. Focus on:
-- Prisma schema modifications (schema.prisma)
-- New models, fields, or relations
-- Data migrations using \`prisma db push\`
-- Index strategy and query optimization
-- The project uses Prisma ORM with SQLite. Running \`npx prisma db push\` applies schema changes.`,
+const COLOR_CLASSES: Record<"sky" | "amber" | "emerald", { active: string; icon: string }> = {
+  sky:     { active: "border-sky-500/40 bg-sky-500/10 text-sky-300",       icon: "text-sky-400" },
+  amber:   { active: "border-amber-500/40 bg-amber-500/10 text-amber-300", icon: "text-amber-400" },
+  emerald: { active: "border-emerald-500/40 bg-emerald-500/10 text-emerald-300", icon: "text-emerald-400" },
 };
 
 function buildPrompt(description: string, editType: EditType, locale: Locale): string {
-  const typeLabel = TYPE_LABELS[editType][locale];
-  const typeContext = TYPE_CONTEXT[editType];
+  const trimmed = description.trim();
 
-  return `## نوع التعديل: ${typeLabel}
+  if (editType === "ui") {
+    return `## نوع التعديل: الواجهة (UI / Interface)
 
-### الوصف
-${description.trim()}
+### الطلب
+${trimmed}
 
 ---
 
-### سياق المشروع
+### سياق المشروع: SRB Internal Management
 
-هذا مشروع **SRB Internal Management** — نظام إدارة داخلي لوكالة إبداعية قطرية.
-
-**Stack التقني:**
+**Stack الواجهة:**
 - Next.js 16 (App Router) + React 19 + TypeScript
-- Prisma ORM + SQLite (better-sqlite3)
-- next-auth v5 (Google OAuth)
-- Tailwind CSS v4
-- واجهة عربية بالكامل + دعم إنجليزي
+- Tailwind CSS v4 + Lucide React icons
+- واجهة عربية RTL + دعم إنجليزي عبر \`lib/i18n/dict.ts\`
 
-**هيكل الملفات الرئيسي:**
+**الملفات الأكثر احتمالاً للتعديل:**
 \`\`\`
-app/              # صفحات وAPI routes
-components/       # React components
+app/
+  projects/page.tsx              # قائمة المشاريع
+  projects/[id]/page.tsx         # صفحة المشروع الواحد
+  projects/new-project-button.tsx
+  tasks/page.tsx                 # صفحة المهام
+  finance/page.tsx               # صفحة المالية
+  finance/edit-transaction-button.tsx
+  team/page.tsx                  # صفحة الفريق
+  team/[id]/page.tsx
+  clients/page.tsx               # صفحة العملاء
+  clients/[id]/page.tsx
+  shoots/page.tsx                # صفحة جلسات التصوير
+  shoots/[id]/page.tsx
+  meetings/page.tsx              # صفحة الاجتماعات
+  reports/page.tsx               # صفحة التقارير
+  activity/page.tsx              # سجل النشاط
+  equipment/page.tsx             # المعدات
+
+components/
+  sidebar.tsx                    # الشريط الجانبي والتنقل
+  tasks/kanban-board.tsx         # لوحة كانبان
+  projects/*.tsx                 # مكوّنات المشاريع
+  finance/*.tsx                  # مكوّنات المالية
+  team/*.tsx                     # مكوّنات الفريق
+  charts/*.tsx                   # مخططات بيانية
+
 lib/
-  db/            # prisma.ts, helpers.ts, audit.ts
-  i18n/          # dict.ts (ar/en translations)
-  auth-guards.ts # requireAuth, requireManagerOrAdmin
-  input-limits.ts
-prisma/
-  schema.prisma  # Prisma schema
-  app.db         # SQLite database
+  i18n/dict.ts                   # ترجمات AR/EN — أضف مفاتيح جديدة هنا
 \`\`\`
 
-**أنماط مهمة:**
-- Server Actions في \`app/*/actions.ts\` مع \`"use server"\`
-- Auth guards: \`requireActiveUser()\` أو \`requireManagerOrAdmin()\`
-- Translations: \`translate(key, locale)\` (server) / \`useT()\` (client)
-- Input validation: \`safeString()\`, \`safeAmount()\` من \`lib/input-limits.ts\`
-- Audit logs: \`logAudit({ action, target, metadata })\`
+**أنماط الكود الواجب اتباعها:**
+- الترجمات: \`useT()\` في client components، \`translate(key, locale)\` في server components
+- ألوان Tailwind: \`zinc\` للأساس، \`emerald\` للإيجابي، \`rose\` للسلبي، \`sky\` للمعلومات، \`amber\` للتحذير
+- أيقونات: \`lucide-react\` فقط (لا تضف مكتبة أيقونات جديدة)
+- RTL مطبّق على مستوى layout — لا تضف \`dir\` أو \`text-right\` inline
 
 ---
 
-### تخصص التعديل
-${typeContext}
+### المطلوب
+
+1. اقرأ الملف/الملفات المعنية أولاً قبل أي تعديل
+2. نفّذ التغيير بنفس نمط وأسلوب الكود الموجود
+3. أضف مفاتيح الترجمة في \`lib/i18n/dict.ts\` (بالعربي والإنجليزي) لأي نصوص جديدة
+4. لا تمس server actions أو schema.prisma
+5. اذكر كل الملفات التي ستعدّلها قبل البدء
+`;
+  }
+
+  if (editType === "sections") {
+    return `## نوع التعديل: الأقسام (Features / Logic)
+
+### الطلب
+${trimmed}
 
 ---
 
-### المطلوب منك
+### سياق المشروع: SRB Internal Management
 
-نفّذ التعديل المطلوب مع مراعاة:
-1. اتبع أنماط الكود الموجودة في المشروع
-2. استخدم TypeScript كامل بدون \`any\`
-3. لا تكسر الكود الموجود
-4. أضف مفاتيح الترجمة الجديدة في \`lib/i18n/dict.ts\` إذا لزم
-5. اذكر كل الملفات التي تحتاج تعديل أو إنشاء
+**Stack المنطق:**
+- Next.js 16 App Router + TypeScript + Prisma ORM + SQLite (better-sqlite3)
+- next-auth v5 (Google OAuth)
+- أدوار: owner > admin > manager > head > department_lead > employee
+
+**الملفات الأكثر احتمالاً للتعديل:**
+\`\`\`
+app/
+  projects/actions.ts            # CRUD المشاريع والمهام الفرعية
+  tasks/actions.ts               # CRUD المهام والتسليمات
+  finance/actions.ts             # المعاملات المالية
+  clients/actions.ts             # إدارة العملاء
+  clients/[id]/actions.ts
+  team/actions.ts                # إدارة الفريق
+  team/[id]/actions.ts
+  shoots/actions.ts              # جلسات التصوير
+  shoots/[id]/actions.ts
+  meetings/actions.ts            # الاجتماعات
+  equipment/actions.ts           # المعدات
+  admin/users/actions.ts         # إدارة المستخدمين (owner/admin فقط)
+  admin/permissions/actions.ts   # الصلاحيات
+
+lib/
+  auth-guards.ts                 # ← اختر الـ guard المناسب من هنا
+  input-limits.ts                # safeString(), safeAmount(), MAX_* constants
+  db/
+    prisma.ts                    # Prisma client singleton
+    audit.ts                     # logAudit({ action, target, metadata })
+    helpers.ts                   # DB helpers مشتركة
+  projects/index.ts              # business logic المشاريع
+  tasks/index.ts                 # business logic المهام
+\`\`\`
+
+**أنماط Server Actions الواجب اتباعها:**
+\`\`\`ts
+"use server";
+// 1. Auth guard أولاً
+const session = await requireManagerOrAbove();
+// Guards متاحة: requireOwner | requireManagerOrAbove | requireDeptLeadOrAbove | requireActiveUser
+
+// 2. Validate input
+const title = safeString(formData.get("title"));
+const amount = safeAmount(formData.get("amount"));
+
+// 3. Business logic مع Prisma
+const result = await prisma.model.create({ data: { ... } });
+
+// 4. Audit log
+await logAudit({ action: "ACTION_NAME", target: result.id, metadata: { ... } });
+
+// 5. Revalidate
+revalidatePath("/section-path");
+
+// 6. Return
+return { ok: true };
+// أو عند خطأ: return { ok: false, message: "رسالة الخطأ" };
+\`\`\`
+
+---
+
+### المطلوب
+
+1. اقرأ ملف الـ actions المعني أولاً لترى الأنماط الموجودة
+2. اقرأ \`lib/auth-guards.ts\` لتختار الـ guard الصحيح
+3. نفّذ التعديل بنفس pattern الـ actions الموجودة بالضبط
+4. إذا احتجت تغيير الـ schema — أخبرني وسأستخدم نوع "قاعدة البيانات" بدلاً
+5. اذكر كل الملفات التي ستعدّلها أو تنشئها قبل البدء
+`;
+  }
+
+  // database
+  return `## نوع التعديل: قاعدة البيانات (Database / Schema)
+
+### الطلب
+${trimmed}
+
+---
+
+### سياق المشروع: SRB Internal Management
+
+**Stack قاعدة البيانات:**
+- Prisma ORM + SQLite (better-sqlite3)
+- تطبيق التغييرات: \`npx prisma db push\` ثم \`npx prisma generate\`
+- Production (Railway): يشغّل \`prisma db push --skip-generate\` تلقائياً عند الـ deploy
+
+**الملفات المعنية:**
+\`\`\`
+prisma/
+  schema.prisma          # ← عدّل هنا فقط
+  app.db                 # SQLite database (لا تمسه مباشرة)
+
+lib/
+  db/
+    prisma.ts            # Prisma client singleton (لا تعدّله)
+\`\`\`
+
+**الموديلات الموجودة حالياً في schema.prisma:**
+\`\`\`
+User, Session, Account          # next-auth
+Project                          # المشاريع الإبداعية
+ProjectPackage                   # باقة المشروع (posts/reels/videos/shoots/stories)
+Task, TaskSubmission             # المهام والتسليمات
+Transaction                      # المعاملات المالية (income/expense)
+Client                           # العملاء
+TeamMember                       # أعضاء الفريق
+Shoot, ShootParticipant         # جلسات التصوير
+Meeting, MeetingAttendee        # الاجتماعات
+Equipment                        # المعدات
+Freelancer                       # المستقلون المرتبطون بالمشاريع
+AuditLog                         # سجل التدقيق
+Notification, PushSubscription  # الإشعارات
+PermissionOverride               # تجاوزات الصلاحيات
+\`\`\`
+
+**أنماط Schema الواجب اتباعها:**
+\`\`\`prisma
+model NewModel {
+  id        String   @id @default(cuid())
+  // الحقول هنا
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+\`\`\`
+
+---
+
+### المطلوب
+
+1. اقرأ \`prisma/schema.prisma\` كاملاً أولاً
+2. اشرح التغيير المطلوب وأثره على الموديلات الموجودة
+3. اكتب التعديل الكامل على الـ schema
+4. اذكر الملفات في \`app/*/actions.ts\` التي تحتاج تحديث بعد تغيير الـ schema
+5. أعطِ الأوامر المطلوب تشغيلها:
+   \`\`\`bash
+   npx prisma db push
+   npx prisma generate
+   \`\`\`
 `;
 }
 
@@ -121,30 +283,45 @@ export function SmartEditGenerator({ locale }: { locale: Locale }) {
 
   return (
     <div className="space-y-4">
-      {/* Edit type selector */}
-      <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-4">
-        <label className="mb-2 block text-xs font-medium text-zinc-400">
+      {/* Edit type selector — cards with description */}
+      <div>
+        <label className="mb-3 block text-xs font-medium text-zinc-400">
           {t("smartEdit.typeLabel")}
         </label>
-        <div className="flex flex-wrap gap-2">
-          {EDIT_TYPES.map((type) => (
-            <button
-              key={type}
-              onClick={() => setEditType(type)}
-              className={cn(
-                "rounded-full px-3 py-1.5 text-xs font-medium transition",
-                editType === type
-                  ? type === "ui"
-                    ? "border border-sky-500/30 bg-sky-500/20 text-sky-300"
-                    : type === "logic"
-                    ? "border border-amber-500/30 bg-amber-500/20 text-amber-300"
-                    : "border border-emerald-500/30 bg-emerald-500/20 text-emerald-300"
-                  : "border border-zinc-700 text-zinc-400 hover:border-zinc-500"
-              )}
-            >
-              {TYPE_LABELS[type][locale]}
-            </button>
-          ))}
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          {EDIT_TYPES.map((type) => {
+            const cfg = TYPE_CONFIG[type];
+            const Icon = cfg.icon;
+            const colors = COLOR_CLASSES[cfg.color];
+            const active = editType === type;
+            return (
+              <button
+                key={type}
+                onClick={() => setEditType(type)}
+                className={cn(
+                  "rounded-xl border p-3 text-start transition",
+                  active
+                    ? colors.active
+                    : "border-zinc-800 bg-zinc-900/40 text-zinc-400 hover:border-zinc-700 hover:bg-zinc-900"
+                )}
+              >
+                <div className="mb-1.5 flex items-center gap-2">
+                  <Icon
+                    className={cn(
+                      "h-4 w-4 shrink-0",
+                      active ? colors.icon : "text-zinc-500"
+                    )}
+                  />
+                  <span className="text-sm font-semibold">
+                    {t(cfg.labelKey)}
+                  </span>
+                </div>
+                <p className={cn("text-[11px] leading-relaxed", active ? "opacity-80" : "text-zinc-500")}>
+                  {t(cfg.descKey)}
+                </p>
+              </button>
+            );
+          })}
         </div>
       </div>
 
