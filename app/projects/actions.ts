@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db/prisma";
 import { logAudit } from "@/lib/db/audit";
-import { requireDeptLeadOrAbove } from "@/lib/auth-guards";
+import { requireDeptLeadOrAbove, requireManagerOrAbove } from "@/lib/auth-guards";
 import {
   safeAmount,
   safeInt,
@@ -418,7 +418,7 @@ export async function markInvoiceReminderSentAction(
 
 
 export async function updateClientAgreementAction(clientId: string, formData: FormData) {
-  await requireManagerOrAdmin();
+  await requireManagerOrAbove();
 
   const storiesRaw = formData.get("storiesPerMonth") as string | null;
   const reelsRaw = formData.get("reelsPerMonth") as string | null;
