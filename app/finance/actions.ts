@@ -75,6 +75,70 @@ export async function createTransactionAction(formData: FormData) {
   return { ok: true };
 }
 
+export async function updateTransactionAction(id: string, formData: FormData) {
+  await requireOwner();
+
+  const kind = formData.get("kind") as string | null;
+  const category = formData.get("category") as string | null;
+  let amount: number;
+  let description: string | null;
+  try {
+    amount = safeAmount(formData.get("amountQar"));
+    description = safeString(formData.get("description"), MAX_LONG_TEXT);
+  } catch (err) {
+    return { ok: false, message: err instanceof Error ? err.message : "إدخال غير صحيح" };
+  }
+  const projectId = (formData.get("projectId") as string | null) || null;
+  const occurredAtRaw = formData.get("occurredAt") as string | null;
+  const occurredAt = occurredAtRaw ? new Date(occurredAtRaw) : new Date();
+  const recurrence = (formData.get("recurrence") as string | null) || "none";
+  const endsAtRaw = formData.get("recurrenceEndsAt") as string | null;
+  const recurrenceEndsAt = endsAtRaw ? new Date(endsAtRaw) : null;
+
+  if (!kind || !["income", "expense"].includes(kind)) {
+    return { ok: false, message: "اختر: دخل أو مصروف" };
+  }
+  if (!category) return { ok: false, message: "الفئة مطلوبة" };
+  if (!amount || amount <= 0) return { ok: false, message: "المبلغ لازم يكون موجب" };
+  if (!["none", "monthly"].includes(recurrence)) {
+    return { ok: false, message: "نوع التكرار غير صحيح" };
+  }
+
+  const before = await prisma.transaction.findUnique({ where: { id } });
+  if (!before) return { ok: false, message: "المعاملة غير موجودة" };
+
+  await prisma.transaction.update({
+    where: { id },
+    data: {
+      kind,
+      category,
+      amountQar: amount,
+      description,
+      projectId,
+      occurredAt,
+      recurrence,
+      recurrenceEndsAt: recurrence === "monthly" ? recurrenceEndsAt : null,
+    },
+  });
+
+  await logAudit({
+    action: "tx.update",
+    target: {
+      type: "transaction",
+      id,
+      label: `${kind === "income" ? "+" : "−"}${amount.toLocaleString("en")} · ${category}`,
+    },
+    metadata: {
+      before: { kind: before.kind, category: before.category, amountQar: before.amountQar },
+      after: { kind, category, amountQar: amount, recurrence, projectId, description },
+    },
+  });
+
+  revalidatePath("/finance");
+  revalidatePath("/");
+  return { ok: true };
+}
+
 export async function deleteTransactionAction(id: string) {
   // Only the owner (الرئيس) can delete — prevents managers / dept_leads from
   // wiping out their own entries to hide the trail. Audit log keeps the record

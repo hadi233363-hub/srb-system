@@ -52,6 +52,7 @@ export function NewProjectButton({ users }: { users: User[] }) {
   const [templateKey, setTemplateKey] = useState<string>("");
   const [projectType, setProjectType] = useState<string>("");
   const [pkgCounts, setPkgCounts] = useState<PkgCounts>({ ...EMPTY_PKG });
+  const [recordPayment, setRecordPayment] = useState(true);
   const formRef = useRef<HTMLFormElement>(null);
   const router = useRouter();
 
@@ -70,6 +71,7 @@ export function NewProjectButton({ users }: { users: User[] }) {
     setTemplateKey("");
     setProjectType("");
     setPkgCounts({ ...EMPTY_PKG });
+    setRecordPayment(true);
   };
 
   const onSubmit = (formData: FormData) => {
@@ -84,6 +86,8 @@ export function NewProjectButton({ users }: { users: User[] }) {
         formData.set(`pkg_target${item.key}`, String(pkgCounts[item.key]));
       }
     }
+
+    formData.set("recordPayment", recordPayment ? "1" : "0");
 
     startTransition(async () => {
       const res = await createProjectAction(formData);
@@ -379,6 +383,26 @@ export function NewProjectButton({ users }: { users: User[] }) {
                     </div>
                   )}
                 </Field>
+
+                {/* Record payment immediately */}
+                <div className="sm:col-span-2">
+                  <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3">
+                    <input
+                      type="checkbox"
+                      checked={recordPayment}
+                      onChange={(e) => setRecordPayment(e.target.checked)}
+                      className="mt-0.5 h-4 w-4 accent-emerald-500"
+                    />
+                    <div>
+                      <div className="text-sm font-medium text-emerald-300">
+                        {t("finance.auto.record")}
+                      </div>
+                      <div className="text-[11px] text-zinc-500">
+                        {t("finance.auto.recordHint")}
+                      </div>
+                    </div>
+                  </label>
+                </div>
 
                 <div className="flex items-center justify-end gap-2 sm:col-span-2">
                   <button

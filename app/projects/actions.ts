@@ -175,6 +175,25 @@ export async function createProjectAction(formData: FormData) {
     });
   }
 
+  // Auto-record the first payment as an income transaction if the user
+  // ticked "Record payment immediately" and the project has a budget.
+  const recordPayment = formData.get("recordPayment") === "1";
+  if (recordPayment && project.budgetQar > 0) {
+    await prisma.transaction.create({
+      data: {
+        kind: "income",
+        category: "project_payment",
+        amountQar: project.budgetQar,
+        description: project.title,
+        projectId: project.id,
+        occurredAt: new Date(),
+        recurrence: billingType === "monthly" ? "monthly" : "none",
+        recurrenceEndsAt: null,
+        createdById: user.id,
+      },
+    });
+  }
+
   await logAudit({
     action: "project.create",
     target: { type: "project", id: project.id, label: project.title },
@@ -183,6 +202,7 @@ export async function createProjectAction(formData: FormData) {
       billingType,
       priority,
       type,
+      recordPayment,
       ...(billingType === "monthly"
         ? { billingCycleDays, firstInvoiceAt: nextInvoiceDueAt?.toISOString() }
         : {}),

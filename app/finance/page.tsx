@@ -19,6 +19,7 @@ import {
 } from "@/lib/db/finance-calc";
 import { NewTransactionButton } from "./new-transaction-button";
 import { DeleteTransactionButton } from "./delete-transaction-button";
+import { EditTransactionButton } from "./edit-transaction-button";
 import { PeriodSelector } from "./period-selector";
 import { getLocale } from "@/lib/i18n/server";
 import { translate, type Locale } from "@/lib/i18n/dict";
@@ -341,7 +342,7 @@ export default async function FinancePage(props: {
                   <th className="px-4 py-2 text-start font-normal">{t("table.description")}</th>
                   <th className="px-4 py-2 text-start font-normal">{t("table.project")}</th>
                   <th className="px-4 py-2 text-start font-normal">{t("table.amount")}</th>
-                  <th className="w-10 px-4 py-2"></th>
+                  <th className="w-20 px-4 py-2"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-800/60">
@@ -401,7 +402,23 @@ export default async function FinancePage(props: {
                         )}
                       </td>
                       <td className="px-2 py-2">
-                        <DeleteTransactionButton id={tx.id} />
+                        <div className="flex items-center gap-1">
+                          <EditTransactionButton
+                            tx={{
+                              id: tx.id,
+                              kind: tx.kind,
+                              category: tx.category,
+                              amountQar: tx.amountQar,
+                              description: tx.description,
+                              occurredAt: tx.occurredAt,
+                              recurrence: tx.recurrence,
+                              recurrenceEndsAt: tx.recurrenceEndsAt,
+                              projectId: tx.projectId,
+                            }}
+                            projects={activeProjectsForDropdown}
+                          />
+                          <DeleteTransactionButton id={tx.id} />
+                        </div>
                       </td>
                     </tr>
                   );

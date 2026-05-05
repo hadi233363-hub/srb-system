@@ -158,6 +158,9 @@ export const DICT: Record<string, { ar: string; en: string }> = {
   "finance.risk.title": { ar: "تحليل المخاطر", en: "Risk analysis" },
   "finance.monthlyProjects.title": { ar: "مشاريع شهرية نشطة", en: "Active monthly projects" },
   "finance.recent.title": { ar: "المعاملات المسجّلة", en: "Recorded transactions" },
+  "finance.editTx": { ar: "تعديل المعاملة", en: "Edit transaction" },
+  "finance.auto.record": { ar: "سجّل الدفعة فوراً في المالية", en: "Record payment immediately in finance" },
+  "finance.auto.recordHint": { ar: "يضيف إيراد مشروع تلقائياً بقيمة الميزانية — تقدر تعدله لاحقاً", en: "Auto-adds a project income entry equal to the budget — editable later" },
   "finance.empty.title": { ar: "ما فيه معاملات بعد", en: "No transactions yet" },
   "finance.empty.desc": {
     ar: "اضغط \"معاملة جديدة\" لتسجّل راتب شهري متكرر أو دفعة لمرة واحدة.",
