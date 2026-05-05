@@ -6,6 +6,7 @@ import { getLocale } from "@/lib/i18n/server";
 import { translate } from "@/lib/i18n/dict";
 import { auth } from "@/auth";
 import { isOwner } from "@/lib/auth/roles";
+import { isOverdue } from "@/lib/db/helpers";
 
 export default async function TasksPage() {
   const locale = await getLocale();
@@ -50,13 +51,7 @@ export default async function TasksPage() {
     }),
   ]);
 
-  const overdueCount = tasks.filter(
-    (t) =>
-      t.dueAt &&
-      t.dueAt.getTime() < Date.now() &&
-      t.status !== "done" &&
-      t.status !== "cancelled"
-  ).length;
+  const overdueCount = tasks.filter((t) => isOverdue(t.dueAt, t.status)).length;
 
   return (
     <div className="space-y-6">
@@ -96,6 +91,7 @@ export default async function TasksPage() {
             status: t.status,
             priority: t.priority,
             dueAt: t.dueAt,
+            completedAt: t.completedAt,
             assignee: t.assignee,
             project: t.project,
             estimatedHours: t.estimatedHours,

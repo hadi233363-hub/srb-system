@@ -34,6 +34,7 @@ import { ClientDeliveries } from "@/components/projects/client-deliveries";
 import { ProjectFreelancers } from "@/components/projects/project-freelancers";
 import { hasPermission } from "@/lib/auth/permissions";
 import { getUserOverrides } from "@/lib/db/permissions";
+import { ClientAgreementForm } from "@/components/projects/client-agreement-form";
 
 export default async function ProjectDetailPage(props: {
   params: Promise<{ id: string }>;
@@ -156,8 +157,8 @@ export default async function ProjectDetailPage(props: {
   ]);
 
   const overdue = isOverdue(project.deadlineAt, project.status);
-  const tasksOverdue = project.tasks.filter(
-    (t) => t.dueAt && t.dueAt.getTime() < Date.now() && t.status !== "done"
+  const tasksOverdue = project.tasks.filter((t) =>
+    isOverdue(t.dueAt, t.status)
   ).length;
   const tasksDone = project.tasks.filter((t) => t.status === "done").length;
 
@@ -495,6 +496,14 @@ export default async function ProjectDetailPage(props: {
         }))}
       />
 
+      {/* Client agreement */}
+      {project.client && (
+        <section>
+          <h2 className="mb-3 text-lg font-semibold">{t("agreement.title")}</h2>
+          <ClientAgreementForm client={project.client} />
+        </section>
+      )}
+
       {/* Tasks Kanban */}
       <section>
         <div className="mb-3 flex items-center justify-between">
@@ -521,6 +530,7 @@ export default async function ProjectDetailPage(props: {
               status: t.status,
               priority: t.priority,
               dueAt: t.dueAt,
+              completedAt: t.completedAt,
               assignee: t.assignee,
               project: t.project,
               estimatedHours: t.estimatedHours,

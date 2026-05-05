@@ -1544,6 +1544,50 @@ export const DICT: Record<string, { ar: string; en: string }> = {
     en: "Delete this note?",
   },
   "clients.notes.delete": { ar: "حذف", en: "Delete" },
+
+  // Task filter by employee
+  "tasks.filter.label": { ar: "الموظف:", en: "Employee:" },
+  "tasks.filter.all": { ar: "الكل", en: "All" },
+
+  // Upcoming deliveries section
+  "tasks.upcoming.title": { ar: "التسليمات القريبة", en: "Upcoming deliveries" },
+  "tasks.upcoming.today": { ar: "اليوم", en: "Today" },
+
+  // Employee stats modal
+  "tasks.stats.title": { ar: "إحصائيات المهام", en: "Task statistics" },
+  "tasks.stats.viewFor": { ar: "إحصائيات {name}", en: "Stats for {name}" },
+  "tasks.stats.completedWeek": { ar: "مكتملة هذا الأسبوع", en: "Done this week" },
+  "tasks.stats.completedMonth": { ar: "مكتملة هذا الشهر", en: "Done this month" },
+  "tasks.stats.overdue": { ar: "متأخرة", en: "Overdue" },
+  "tasks.stats.completionRate": { ar: "نسبة الإنجاز", en: "Completion rate" },
+  "tasks.stats.totalTasks": { ar: "إجمالي المهام", en: "Total tasks" },
+
+  // Client agreement
+  "agreement.title": { ar: "تفاصيل الاتفاقية", en: "Agreement details" },
+  "agreement.stories": { ar: "ستوريات/شهر", en: "Stories/mo" },
+  "agreement.reels": { ar: "ريلز/شهر", en: "Reels/mo" },
+  "agreement.posts": { ar: "بوستات/شهر", en: "Posts/mo" },
+  "agreement.contentType": { ar: "نوع المحتوى", en: "Content type" },
+  "agreement.contentTypePlaceholder": { ar: "مثال: محتوى إعلاني + تصوير منتجات", en: "e.g. Ads + product photography" },
+  "agreement.notes": { ar: "ملاحظات الاتفاق", en: "Agreement notes" },
+  "agreement.notesPlaceholder": { ar: "أي تفاصيل إضافية عن الاتفاقية...", en: "Any additional agreement details..." },
+  "agreement.empty": { ar: "ما في تفاصيل اتفاقية بعد · اضغط تعديل لإضافتها", en: "No agreement details yet · click Edit to add" },
+  "agreement.saving": { ar: "يحفظ...", en: "Saving..." },
+  "agreement.saveFailed": { ar: "فشل الحفظ، حاول ثانية", en: "Save failed, try again" },
+
+  // Smart edit page
+  "nav.smartEdit": { ar: "التعديل الذكي", en: "Smart edit" },
+  "smartEdit.title": { ar: "التعديل الذكي", en: "Smart edit" },
+  "smartEdit.subtitle": { ar: "اكتب وصف التعديل وتلقّ بروبت احترافي جاهز لـ Claude Code", en: "Describe your change and get a ready-to-use Claude Code prompt" },
+  "smartEdit.typeLabel": { ar: "نوع التعديل", en: "Change type" },
+  "smartEdit.descLabel": { ar: "وصف التعديل", en: "Change description" },
+  "smartEdit.descPlaceholder": { ar: "اشرح بالتفصيل التغيير اللي تبيه...", en: "Describe the change you want in detail..." },
+  "smartEdit.chars": { ar: "حرف", en: "chars" },
+  "smartEdit.generate": { ar: "ولّد البروبت", en: "Generate prompt" },
+  "smartEdit.result": { ar: "البروبت الجاهز", en: "Ready prompt" },
+  "smartEdit.copy": { ar: "نسخ", en: "Copy" },
+  "smartEdit.copied": { ar: "تم النسخ", en: "Copied!" },
+  "smartEdit.hint": { ar: "الصق هذا البروبت مباشرة في Claude Code", en: "Paste this prompt directly into Claude Code" },
 };
 
 /** Translate a key into a given locale. Falls back to English if key missing. */

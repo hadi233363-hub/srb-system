@@ -113,7 +113,9 @@ export function formatDate(
 export function isOverdue(dueAt: Date | null | undefined, status?: string): boolean {
   if (!dueAt) return false;
   if (status === "done" || status === "cancelled") return false;
-  return new Date(dueAt).getTime() < Date.now();
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return new Date(dueAt) < today;
 }
 
 export function daysUntil(dueAt: Date | null | undefined): number | null {

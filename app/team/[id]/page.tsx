@@ -310,6 +310,7 @@ export default async function EmployeeDetailPage(props: {
               status: t.status,
               priority: t.priority,
               dueAt: t.dueAt,
+              completedAt: t.completedAt,
               assignee: t.assignee,
               project: t.project,
               estimatedHours: t.estimatedHours,

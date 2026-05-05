@@ -22,6 +22,7 @@ export interface TaskDetail {
   status: string;
   priority: string;
   dueAt: Date | null;
+  completedAt: Date | null;
   estimatedHours: number | null;
   assignee: { id: string; name: string } | null;
   collaborators?: { user: { id: string; name: string } }[];

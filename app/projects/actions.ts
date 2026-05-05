@@ -415,3 +415,28 @@ export async function markInvoiceReminderSentAction(
   });
   return { ok: true };
 }
+
+
+export async function updateClientAgreementAction(clientId: string, formData: FormData) {
+  await requireManagerOrAdmin();
+
+  const storiesRaw = formData.get("storiesPerMonth") as string | null;
+  const reelsRaw = formData.get("reelsPerMonth") as string | null;
+  const postsRaw = formData.get("postsPerMonth") as string | null;
+  const contentType = (formData.get("contentType") as string | null)?.trim() || null;
+  const agreementNotes = (formData.get("agreementNotes") as string | null)?.trim() || null;
+
+  await prisma.client.update({
+    where: { id: clientId },
+    data: {
+      storiesPerMonth: storiesRaw ? parseInt(storiesRaw, 10) : null,
+      reelsPerMonth: reelsRaw ? parseInt(reelsRaw, 10) : null,
+      postsPerMonth: postsRaw ? parseInt(postsRaw, 10) : null,
+      contentType,
+      agreementNotes,
+    },
+  });
+
+  revalidatePath("/projects");
+  return { ok: true };
+}

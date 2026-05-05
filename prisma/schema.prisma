@@ -310,6 +310,12 @@ model Client {
   // Distinct from the chronological `noteEntries` relation below, which logs
   // dated touchpoints with the user attribution and a separate row per entry.
   notes     String?
+  // Agreement fields
+  storiesPerMonth  Int?
+  reelsPerMonth    Int?
+  postsPerMonth    Int?
+  contentType      String?
+  agreementNotes   String?
   createdAt DateTime  @default(now())
   // @default(now()) is required so `prisma db push` can backfill existing
   // rows when the column is added to a non-empty production database. Prisma

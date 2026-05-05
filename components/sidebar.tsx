@@ -21,6 +21,7 @@ import {
   Camera,
   Package,
   Menu,
+  Wand2,
   X,
   KeyRound,
 } from "lucide-react";
@@ -33,11 +34,6 @@ import {
   type Role,
 } from "@/lib/auth/roles";
 
-// Hide most of the local part of an email so the address can still be
-// recognised by its owner without exposing it to anyone glancing at the screen.
-//   "ahmed.ali@gmail.com"  → "a***@gmail.com"
-//   "x@gmail.com"          → "x***@gmail.com"
-//   "no-domain"            → "no-domain"   (untouched)
 function maskEmail(email: string): string {
   if (!email) return "";
   const at = email.lastIndexOf("@");
@@ -48,9 +44,6 @@ function maskEmail(email: string): string {
   return `${head}***${domain}`;
 }
 
-// minRole controls which tier can see a sidebar entry. We resolve it against
-// the user's role via meets() — so e.g. minRole="manager" hides the entry from
-// employees + dept_leads but shows it to managers and owners.
 type MinRole = "owner" | "manager" | "dept_lead" | "any";
 
 interface NavItem {
@@ -70,16 +63,14 @@ const nav: NavItem[] = [
   { href: "/meetings", labelKey: "nav.meetings", icon: Calendar, highlight: true },
   { href: "/shoots", labelKey: "nav.shoots", icon: Camera, highlight: true },
   { href: "/equipment", labelKey: "nav.equipment", icon: Package },
-  // Finance: dept_lead and above can OPEN the page (to record transactions).
-  // The owner-only totals view is enforced inside the page itself.
   { href: "/finance", labelKey: "nav.finance", icon: DollarSign, minRole: "dept_lead" },
   { href: "/reports", labelKey: "nav.reports", icon: FileText, minRole: "owner" },
-  // User approval is now manager-accessible. Owner sees it too via inheritance.
   { href: "/admin/users", labelKey: "nav.admin_users", icon: ShieldCheck, minRole: "manager" },
   { href: "/admin/permissions", labelKey: "nav.admin_permissions", icon: KeyRound, minRole: "owner" },
   { href: "/admin/audit", labelKey: "nav.admin_audit", icon: Shield, minRole: "owner" },
   { href: "/admin/backup", labelKey: "nav.admin_backup", icon: Archive, minRole: "owner" },
   { href: "/admin/theme", labelKey: "nav.admin_theme", icon: Palette, minRole: "owner" },
+  { href: "/smart-edit", labelKey: "nav.smartEdit", icon: Wand2, minRole: "owner" },
 ];
 
 function visibleTo(role: Role, min: MinRole | undefined): boolean {
@@ -103,22 +94,16 @@ export function Sidebar({ userRole, userName, userEmail, logoPath }: Props) {
   const { locale } = useLocale();
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  // Auto-close the mobile drawer when the user navigates.
   useEffect(() => {
     setMobileOpen(false);
   }, [pathname]);
 
-  // Listen for the bottom-nav "More" button. We use a window-level custom
-  // event so the bottom nav (a sibling component, not a parent) can trigger
-  // the drawer without lifting state into a wrapper. Pairs with the
-  // dispatcher in components/mobile-bottom-nav.tsx → MobileBottomNavMount.
   useEffect(() => {
     const onOpen = () => setMobileOpen(true);
     window.addEventListener("srb:open-mobile-nav", onOpen);
     return () => window.removeEventListener("srb:open-mobile-nav", onOpen);
   }, []);
 
-  // Lock body scroll while the drawer is open on mobile.
   useEffect(() => {
     if (mobileOpen) {
       document.body.style.overflow = "hidden";
@@ -138,7 +123,6 @@ export function Sidebar({ userRole, userName, userEmail, logoPath }: Props) {
       className={cn(
         "flex w-60 shrink-0 flex-col gap-1 bg-zinc-900/95 p-4 md:bg-zinc-900/40",
         "md:relative md:h-auto md:translate-x-0 md:border-zinc-800 md:border-s",
-        // Mobile: fixed drawer overlay
         "fixed inset-y-0 z-40 h-screen border-zinc-800 border-s transition-transform duration-200",
         locale === "ar" ? "right-0" : "left-0",
         mobileOpen
@@ -164,7 +148,6 @@ export function Sidebar({ userRole, userName, userEmail, logoPath }: Props) {
             {t("brand.system")}
           </div>
         </div>
-        {/* Close button — mobile only. 44px min size meets iOS touch target guidance. */}
         <button
           onClick={() => setMobileOpen(false)}
           className="mt-2 flex h-11 w-11 items-center justify-center rounded-md text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100 md:hidden"
@@ -257,8 +240,6 @@ export function Sidebar({ userRole, userName, userEmail, logoPath }: Props) {
 
   return (
     <>
-      {/* Mobile hamburger — only shown below md. Safe-area-inset keeps the
-          button below the iPhone Dynamic Island / notch. */}
       <button
         onClick={() => setMobileOpen(true)}
         className="fixed z-30 flex h-11 w-11 items-center justify-center rounded-lg border border-zinc-800 bg-zinc-900/90 text-zinc-200 shadow-lg md:hidden"
@@ -273,7 +254,6 @@ export function Sidebar({ userRole, userName, userEmail, logoPath }: Props) {
         <Menu className="h-5 w-5" />
       </button>
 
-      {/* Backdrop — clicking closes the drawer */}
       {mobileOpen && (
         <div
           onClick={() => setMobileOpen(false)}
