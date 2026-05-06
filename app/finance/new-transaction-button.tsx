@@ -12,10 +12,25 @@ interface ProjectLite {
   title: string;
 }
 
+interface Preset {
+  projectId: string;
+  amountQar: number;
+}
+
 // Categories that typically recur monthly.
 const MONTHLY_DEFAULT = new Set(["salary", "overhead", "tool"]);
 
-export function NewTransactionButton({ projects }: { projects: ProjectLite[] }) {
+export function NewTransactionButton({
+  projects,
+  preset,
+  compact = false,
+  openLabel,
+}: {
+  projects: ProjectLite[];
+  preset?: Preset;
+  compact?: boolean;
+  openLabel?: string;
+}) {
   const t = useT();
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -73,13 +88,23 @@ export function NewTransactionButton({ projects }: { projects: ProjectLite[] }) 
 
   return (
     <>
-      <button
-        onClick={() => setOpen(true)}
-        className="flex items-center gap-2 rounded-lg bg-emerald-500 px-3 py-1.5 text-sm font-semibold text-emerald-950 transition hover:bg-emerald-400"
-      >
-        <Plus className="h-4 w-4" />
-        {t("action.newTransaction")}
-      </button>
+      {compact ? (
+        <button
+          onClick={() => setOpen(true)}
+          className="flex items-center gap-1.5 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-400 transition hover:bg-emerald-500/20"
+        >
+          <Plus className="h-3 w-3" />
+          {openLabel ?? t("finance.recordPayment")}
+        </button>
+      ) : (
+        <button
+          onClick={() => setOpen(true)}
+          className="flex items-center gap-2 rounded-lg bg-emerald-500 px-3 py-1.5 text-sm font-semibold text-emerald-950 transition hover:bg-emerald-400"
+        >
+          <Plus className="h-4 w-4" />
+          {t("action.newTransaction")}
+        </button>
+      )}
 
       {open && (
         <div
@@ -221,6 +246,7 @@ export function NewTransactionButton({ projects }: { projects: ProjectLite[] }) 
                   step="0.01"
                   min="0"
                   required
+                  defaultValue={preset?.amountQar ?? ""}
                   placeholder="5000"
                   className="w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 focus:border-emerald-500/50 focus:outline-none"
                 />
@@ -257,7 +283,7 @@ export function NewTransactionButton({ projects }: { projects: ProjectLite[] }) 
                 </label>
                 <select
                   name="projectId"
-                  defaultValue=""
+                  defaultValue={preset?.projectId ?? ""}
                   className="w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 focus:border-emerald-500/50 focus:outline-none"
                 >
                   <option value="">—</option>

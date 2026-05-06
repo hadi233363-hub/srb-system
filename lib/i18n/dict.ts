@@ -331,6 +331,7 @@ export const DICT: Record<string, { ar: string; en: string }> = {
     en: "🔁 Active monthly projects",
   },
   "finance.monthlyProjects.perMonth": { ar: "/شهر", en: "/mo" },
+  "finance.recordPayment": { ar: "سجّل دفعة", en: "Record payment" },
   "finance.transactionsHeading": { ar: "المعاملات المسجّلة", en: "Recorded transactions" },
   "finance.empty.descFull": {
     ar: "اضغط \"معاملة جديدة\" لتسجّل راتب شهري متكرر (يُحتسب كل شهر تلقائياً) أو دفعة لمرة واحدة.",

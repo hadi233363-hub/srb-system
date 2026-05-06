@@ -416,13 +416,20 @@ export default async function FinancePage(props: {
               .map((p) => (
                 <li
                   key={p.id}
-                  className="flex items-center justify-between rounded-md bg-zinc-950/40 px-3 py-1.5"
+                  className="flex items-center justify-between gap-3 rounded-md bg-zinc-950/40 px-3 py-1.5"
                 >
                   <span className="truncate text-zinc-300">{p.title}</span>
-                  <span className="tabular-nums text-emerald-400">
-                    {formatQar(p.budgetQar, { locale })}
-                    {t("finance.monthlyProjects.perMonth")}
-                  </span>
+                  <div className="flex shrink-0 items-center gap-3">
+                    <span className="tabular-nums text-emerald-400">
+                      {formatQar(p.budgetQar, { locale })}
+                      {t("finance.monthlyProjects.perMonth")}
+                    </span>
+                    <NewTransactionButton
+                      projects={activeProjectsForDropdown}
+                      preset={{ projectId: p.id, amountQar: p.budgetQar }}
+                      compact
+                    />
+                  </div>
                 </li>
               ))}
           </ul>
