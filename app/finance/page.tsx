@@ -23,7 +23,9 @@ import { EditTransactionButton } from "./edit-transaction-button";
 import { PeriodSelector } from "./period-selector";
 import { getLocale } from "@/lib/i18n/server";
 import { translate, type Locale } from "@/lib/i18n/dict";
-import { isDeptLeadOrAbove, isOwner } from "@/lib/auth/roles";
+import { isOwner } from "@/lib/auth/roles";
+import { hasPermission } from "@/lib/auth/permissions";
+import { getUserOverrides } from "@/lib/db/permissions";
 
 const VALID_PERIODS: Period[] = ["week", "month", "quarter", "year"];
 
@@ -32,13 +34,14 @@ export default async function FinancePage(props: {
 }) {
   const [session, locale] = await Promise.all([auth(), getLocale()]);
   const t = (key: string) => translate(key, locale);
-  // Only the OWNER (الرئيس) sees totals, baseline, P&L and the full
-  // transactions table. Manager + dept_lead can still RECORD transactions
-  // (income / expense / salary) — they get the simplified entry view below.
-  // Plain employees don't see the page at all.
   const role = session?.user.role;
+  const userId = session?.user?.id;
+  const overrides = userId ? await getUserOverrides(userId) : [];
+
+  // Owner sees full dashboard. Other roles / override holders see entry-only view.
+  // Employees with an explicit finance:view override can record transactions.
   const isFinanceOwner = isOwner(role);
-  const canRecord = isDeptLeadOrAbove(role);
+  const canRecord = hasPermission({ role: role ?? "employee" }, "finance", "view", overrides);
 
   if (!canRecord) {
     return (

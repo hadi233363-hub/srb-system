@@ -39,6 +39,7 @@ const TABS: NavItem[] = [
 
 interface Props {
   role: Role;
+  hasExtraPerms?: boolean;
 }
 
 function dispatchOpenDrawer() {
@@ -46,7 +47,7 @@ function dispatchOpenDrawer() {
   window.dispatchEvent(new CustomEvent("srb:open-mobile-nav"));
 }
 
-export function MobileBottomNav({ role }: Props) {
+export function MobileBottomNav({ role, hasExtraPerms = false }: Props) {
   const onOpenDrawer = dispatchOpenDrawer;
   const pathname = usePathname();
   const t = useT();
@@ -55,7 +56,7 @@ export function MobileBottomNav({ role }: Props) {
   // "More" button that pops the sidebar drawer for full nav (admin pages,
   // finance, projects, etc). This way the bottom nav still gives muscle
   // memory for the common 4 actions without hiding power-user routes.
-  const showDrawerButton = role !== "employee";
+  const showDrawerButton = role !== "employee" || hasExtraPerms;
 
   const items: { kind: "link" | "drawer"; item?: NavItem }[] = TABS.map(
     (item) => ({ kind: "link" as const, item })

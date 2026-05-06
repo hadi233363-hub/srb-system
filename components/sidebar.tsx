@@ -33,6 +33,7 @@ import {
   isOwner,
   type Role,
 } from "@/lib/auth/roles";
+import { hasPermission, type Module, type OverrideEntry } from "@/lib/auth/permissions";
 
 function maskEmail(email: string): string {
   if (!email) return "";
@@ -52,6 +53,7 @@ interface NavItem {
   icon: typeof Home;
   highlight?: boolean;
   minRole?: MinRole;
+  moduleKey?: Module; // when set, also check permission override for this module
 }
 
 const nav: NavItem[] = [
@@ -63,7 +65,7 @@ const nav: NavItem[] = [
   { href: "/meetings", labelKey: "nav.meetings", icon: Calendar, highlight: true },
   { href: "/shoots", labelKey: "nav.shoots", icon: Camera, highlight: true },
   { href: "/equipment", labelKey: "nav.equipment", icon: Package },
-  { href: "/finance", labelKey: "nav.finance", icon: DollarSign, minRole: "dept_lead" },
+  { href: "/finance", labelKey: "nav.finance", icon: DollarSign, minRole: "dept_lead", moduleKey: "finance" },
   { href: "/reports", labelKey: "nav.reports", icon: FileText, minRole: "owner" },
   { href: "/admin/users", labelKey: "nav.admin_users", icon: ShieldCheck, minRole: "manager" },
   { href: "/admin/permissions", labelKey: "nav.admin_permissions", icon: KeyRound, minRole: "owner" },
@@ -73,12 +75,22 @@ const nav: NavItem[] = [
   { href: "/smart-edit", labelKey: "nav.smartEdit", icon: Wand2, minRole: "owner" },
 ];
 
-function visibleTo(role: Role, min: MinRole | undefined): boolean {
+function visibleTo(
+  role: Role,
+  min: MinRole | undefined,
+  overrides: OverrideEntry[],
+  moduleKey?: Module
+): boolean {
   if (!min || min === "any") return true;
-  if (min === "owner") return isOwner(role);
-  if (min === "manager") return isManagerOrAbove(role);
-  if (min === "dept_lead") return isDeptLeadOrAbove(role);
-  return true;
+  const passesRole =
+    min === "owner" ? isOwner(role) :
+    min === "manager" ? isManagerOrAbove(role) :
+    min === "dept_lead" ? isDeptLeadOrAbove(role) :
+    true;
+  if (passesRole) return true;
+  // If role alone isn't enough, check if an explicit override grants access
+  if (moduleKey) return hasPermission({ role }, moduleKey, "view", overrides);
+  return false;
 }
 
 interface Props {
@@ -86,9 +98,10 @@ interface Props {
   userName: string;
   userEmail: string;
   logoPath?: string;
+  overrides?: OverrideEntry[];
 }
 
-export function Sidebar({ userRole, userName, userEmail, logoPath }: Props) {
+export function Sidebar({ userRole, userName, userEmail, logoPath, overrides = [] }: Props) {
   const pathname = usePathname();
   const t = useT();
   const { locale } = useLocale();
@@ -158,7 +171,7 @@ export function Sidebar({ userRole, userName, userEmail, logoPath }: Props) {
       </div>
       <nav className="flex flex-col gap-0.5 overflow-y-auto">
         {nav.map((item) => {
-          if (!visibleTo(userRole, item.minRole)) return null;
+          if (!visibleTo(userRole, item.minRole, overrides, item.moduleKey)) return null;
           const Icon = item.icon;
           const active =
             item.href === "/"

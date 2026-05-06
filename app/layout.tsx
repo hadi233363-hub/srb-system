@@ -12,6 +12,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/db/prisma";
 import { getLocale } from "@/lib/i18n/server";
 import { LocaleProvider } from "@/lib/i18n/client";
+import { getUserOverrides } from "@/lib/db/permissions";
 
 const cairo = Cairo({
   variable: "--font-cairo",
@@ -61,6 +62,7 @@ export default async function RootLayout({
     prisma.appSetting.findUnique({ where: { id: 1 } }).catch(() => null),
   ]);
   const user = session?.user;
+  const userOverrides = user?.id ? await getUserOverrides(user.id) : [];
   const dir = locale === "ar" ? "rtl" : "ltr";
   const isActive = user?.active === true;
 
@@ -86,6 +88,7 @@ export default async function RootLayout({
                   userName={user.name ?? user.email ?? "User"}
                   userEmail={user.email ?? ""}
                   logoPath={settings?.logoPath ?? "/srb-logo-white.png"}
+                  overrides={userOverrides}
                 />
                 <div className="flex min-w-0 flex-1 flex-col">
                   <TopbarReal />
@@ -100,7 +103,10 @@ export default async function RootLayout({
                   </main>
                 </div>
                 {/* Mobile bottom nav — visible <md only. */}
-                <MobileBottomNav role={user.role} />
+                <MobileBottomNav
+                  role={user.role}
+                  hasExtraPerms={userOverrides.some((o) => o.allowed)}
+                />
                 {/* Background reminder pollers — fire desktop notifications. */}
                 <MeetingReminder />
                 <InvoiceReminder />
