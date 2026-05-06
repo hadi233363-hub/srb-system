@@ -400,16 +400,17 @@ model Project {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
-  members      ProjectMember[]
-  tasks        Task[]
-  transactions Transaction[]
-  shoots       PhotoShoot[]
-  phases       ProjectPhase[]
-  brief        ProjectBrief?
-  package      ProjectPackage?
-  assets       ProjectAsset[]
-  deliveries   ClientDelivery[]
-  freelancers  ProjectFreelancer[]
+  members        ProjectMember[]
+  tasks          Task[]
+  transactions   Transaction[]
+  shoots         PhotoShoot[]
+  phases         ProjectPhase[]
+  brief          ProjectBrief?
+  package        ProjectPackage?
+  assets         ProjectAsset[]
+  deliveries     ClientDelivery[]
+  freelancers    ProjectFreelancer[]
+  partnerShares  PartnerShare[]
 
   @@index([status])
   @@index([clientId])
@@ -645,6 +646,7 @@ model Transaction {
   @@index([kind])
   @@index([recurrence])
   @@index([freelancerId])
+  @@index([createdById])
 }
 
 // ---------------------------------------------------------------------------
@@ -983,4 +985,22 @@ model BackupRun {
 
   @@index([createdAt])
   @@index([status])
+}
+
+// ---------------------------------------------------------------------------
+// Partner share — private to the owner. Stores what percentage of a project's
+// revenue goes to a partner. Never exposed to any non-owner user unless the
+// owner explicitly grants partnerShare:view via the Permission Control Panel.
+// ---------------------------------------------------------------------------
+model PartnerShare {
+  id           String   @id @default(cuid())
+  projectId    String
+  project      Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  partnerName  String   // اسم الشريك
+  sharePercent Float    // 0.0 – 100.0
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([projectId])
 }

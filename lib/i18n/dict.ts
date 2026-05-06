@@ -1607,6 +1607,37 @@ export const DICT: Record<string, { ar: string; en: string }> = {
   "smartEdit.type.sections.desc": { ar: "إضافة ميزة أو تعديلها — server actions، صلاحيات، منطق الأعمال، تحقق", en: "Features, server actions, permissions, business logic" },
   "smartEdit.type.database": { ar: "قاعدة البيانات", en: "Database / Schema" },
   "smartEdit.type.database.desc": { ar: "تعديل جداول البيانات — إضافة حقول أو موديلات أو علاقات جديدة", en: "Schema changes — tables, fields, relations in Prisma" },
+
+  // Partner share page
+  "nav.partnerShare": { ar: "نسبة الشريك", en: "Partner share" },
+  "partnerShare.title": { ar: "نسبة الشريك", en: "Partner share" },
+  "partnerShare.subtitle": { ar: "احتسب حصص الشركاء من إيرادات المشاريع — لا يراها أحد غيرك", en: "Calculate partner shares from project revenues — private to you" },
+  "partnerShare.privateWarning": { ar: "بيانات سرية — لا تظهر إلا للرئيس أو من تمنحه الصلاحية صراحةً", en: "Private data — visible only to the owner or those explicitly granted access" },
+  "partnerShare.addShare": { ar: "إضافة نسبة", en: "Add share" },
+  "partnerShare.editShare": { ar: "تعديل نسبة", en: "Edit share" },
+  "partnerShare.totalIncome": { ar: "إجمالي الإيرادات", en: "Total revenue" },
+  "partnerShare.totalPartnerAmount": { ar: "إجمالي حصص الشركاء", en: "Total partner shares" },
+  "partnerShare.entryCount": { ar: "عدد الإدخالات", en: "Entries" },
+  "partnerShare.tableHeading": { ar: "تفاصيل الحصص", en: "Share details" },
+  "partnerShare.empty": { ar: "لا توجد حصص مسجّلة بعد — أضف أول حصة بالزر أعلاه", en: "No shares recorded yet — add the first one above" },
+  "partnerShare.col.project": { ar: "المشروع", en: "Project" },
+  "partnerShare.col.partner": { ar: "الشريك", en: "Partner" },
+  "partnerShare.col.percent": { ar: "النسبة", en: "Share %" },
+  "partnerShare.col.income": { ar: "إيرادات المشروع", en: "Project revenue" },
+  "partnerShare.col.amount": { ar: "حصة الشريك", en: "Partner amount" },
+  "partnerShare.field.project": { ar: "المشروع", en: "Project" },
+  "partnerShare.field.selectProject": { ar: "اختر مشروعاً", en: "Select a project" },
+  "partnerShare.field.partnerName": { ar: "اسم الشريك", en: "Partner name" },
+  "partnerShare.field.partnerNamePlaceholder": { ar: "مثال: محمد الكواري", en: "e.g. Mohammed Al-Kuwari" },
+  "partnerShare.field.sharePercent": { ar: "النسبة %", en: "Share %" },
+  "partnerShare.field.notes": { ar: "ملاحظات", en: "Notes" },
+  "partnerShare.deleteConfirmTitle": { ar: "تأكيد الحذف", en: "Confirm delete" },
+  "partnerShare.deleteConfirmBody": { ar: "هل تريد حذف نسبة", en: "Delete the share for" },
+
+  // Accounting (accountant permission tier)
+  "accounting.title": { ar: "معاملاتي المالية", en: "My transactions" },
+  "accounting.subtitle": { ar: "أدخل وراجع المعاملات التي سجّلتها — لا تظهر لك الأرباح الإجمالية", en: "Enter and review transactions you recorded — totals and profits are not shown" },
+  "accounting.empty": { ar: "لم تسجّل أي معاملات بعد", en: "No transactions recorded yet" },
 };
 
 /** Translate a key into a given locale. Falls back to English if key missing. */

@@ -94,6 +94,50 @@ export async function requirePermission(
 }
 
 // ---------------------------------------------------------------------------
+// Finance-specific guards — check role tier first, then fall back to
+// permission overrides so accountants (granted via override) can record
+// and manage transactions without a role promotion.
+// ---------------------------------------------------------------------------
+
+/** Can create a transaction: dept_lead+ by role OR finance:create / accounting:create override. */
+export async function requireFinanceEntry(): Promise<ActiveUser> {
+  const user = await requireActiveUser();
+  if (isDeptLeadOrAbove(user.role)) return user;
+  const overrides = await getUserOverrides(user.id);
+  if (
+    checkPermission(user, "finance", "create", overrides) ||
+    checkPermission(user, "accounting", "create", overrides)
+  ) {
+    return user;
+  }
+  throw new Error("صلاحيات غير كافية");
+}
+
+/** Can edit a transaction: owner by role OR accounting:edit override.
+ *  Returns `{ isOwnerRole }` so the caller can enforce own-only restriction for accountants. */
+export async function requireFinanceEdit(): Promise<ActiveUser & { isOwnerRole: boolean }> {
+  const user = await requireActiveUser();
+  if (isOwner(user.role)) return { ...user, isOwnerRole: true };
+  const overrides = await getUserOverrides(user.id);
+  if (checkPermission(user, "accounting", "edit", overrides)) {
+    return { ...user, isOwnerRole: false };
+  }
+  throw new Error("صلاحيات غير كافية");
+}
+
+/** Can delete a transaction: owner by role OR accounting:delete override.
+ *  Returns `{ isOwnerRole }` so the caller can enforce own-only restriction for accountants. */
+export async function requireFinanceDelete(): Promise<ActiveUser & { isOwnerRole: boolean }> {
+  const user = await requireActiveUser();
+  if (isOwner(user.role)) return { ...user, isOwnerRole: true };
+  const overrides = await getUserOverrides(user.id);
+  if (checkPermission(user, "accounting", "delete", overrides)) {
+    return { ...user, isOwnerRole: false };
+  }
+  throw new Error("صلاحيات غير كافية");
+}
+
+// ---------------------------------------------------------------------------
 // Backwards-compat aliases — keep existing call sites working while the
 // codebase migrates to the new vocabulary. New code should prefer the
 // explicit helpers above.

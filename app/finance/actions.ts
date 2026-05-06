@@ -4,17 +4,15 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db/prisma";
 import { logAudit } from "@/lib/db/audit";
 import {
-  requireDeptLeadOrAbove,
-  requireOwner,
+  requireFinanceEntry,
+  requireFinanceEdit,
+  requireFinanceDelete,
 } from "@/lib/auth-guards";
 import { safeAmount, safeString, MAX_LONG_TEXT } from "@/lib/input-limits";
 
 export async function createTransactionAction(formData: FormData) {
-  // Recording numbers (income / expense / salary) is allowed for anyone at
-  // dept_lead or above. Plain employees can NOT record transactions — that
-  // closes the previous hole where any active user could create financial
-  // records. The aggregation dashboard stays owner-only (page-level gate).
-  const user = await requireDeptLeadOrAbove();
+  // dept_lead+ by role, OR explicit accounting:create / finance:create override.
+  const user = await requireFinanceEntry();
 
   const kind = formData.get("kind") as string | null;
   const category = formData.get("category") as string | null;
@@ -76,7 +74,7 @@ export async function createTransactionAction(formData: FormData) {
 }
 
 export async function updateTransactionAction(id: string, formData: FormData) {
-  await requireOwner();
+  const editor = await requireFinanceEdit();
 
   const kind = formData.get("kind") as string | null;
   const category = formData.get("category") as string | null;
@@ -106,6 +104,11 @@ export async function updateTransactionAction(id: string, formData: FormData) {
 
   const before = await prisma.transaction.findUnique({ where: { id } });
   if (!before) return { ok: false, message: "المعاملة غير موجودة" };
+
+  // Accountants can only edit transactions they created themselves
+  if (!editor.isOwnerRole && before.createdById !== editor.id) {
+    return { ok: false, message: "لا تملك صلاحية تعديل هذه المعاملة" };
+  }
 
   await prisma.transaction.update({
     where: { id },
@@ -140,14 +143,15 @@ export async function updateTransactionAction(id: string, formData: FormData) {
 }
 
 export async function deleteTransactionAction(id: string) {
-  // Only the owner (الرئيس) can delete — prevents managers / dept_leads from
-  // wiping out their own entries to hide the trail. Audit log keeps the record
-  // even after the transaction itself is gone.
-  await requireOwner();
+  // Owner can delete any transaction. Accountants can only delete their own.
+  const deleter = await requireFinanceDelete();
   const before = await prisma.transaction.findUnique({
     where: { id },
     include: { project: { select: { title: true } } },
   });
+  if (before && !deleter.isOwnerRole && before.createdById !== deleter.id) {
+    return { ok: false, message: "لا تملك صلاحية حذف هذه المعاملة" };
+  }
   await prisma.transaction.delete({ where: { id } });
   if (before) {
     await logAudit({

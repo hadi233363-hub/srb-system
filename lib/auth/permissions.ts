@@ -41,10 +41,12 @@ export const MODULES = [
   "equipment",
   "team",
   "finance",
+  "accounting",
   "reports",
   "admin",
   "backup",
   "audit",
+  "partnerShare",
 ] as const;
 export type Module = (typeof MODULES)[number];
 
@@ -162,6 +164,12 @@ export const MODULE_SPECS: readonly ModuleSpec[] = [
     actions: ["view", "create", "edit", "delete", "manage"],
   },
   {
+    key: "accounting",
+    labelAr: "المحاسبة",
+    labelEn: "Accounting",
+    actions: ["view", "create", "edit", "delete"],
+  },
+  {
     key: "reports",
     labelAr: "التقارير",
     labelEn: "Reports",
@@ -184,6 +192,12 @@ export const MODULE_SPECS: readonly ModuleSpec[] = [
     labelAr: "سجل الإجراءات",
     labelEn: "Audit log",
     actions: ["view"],
+  },
+  {
+    key: "partnerShare",
+    labelAr: "نسبة الشريك",
+    labelEn: "Partner share",
+    actions: ["view", "create", "edit", "delete"],
   },
 ];
 

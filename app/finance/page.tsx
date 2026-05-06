@@ -24,8 +24,12 @@ import { PeriodSelector } from "./period-selector";
 import { getLocale } from "@/lib/i18n/server";
 import { translate, type Locale } from "@/lib/i18n/dict";
 import { isOwner } from "@/lib/auth/roles";
-import { hasPermission } from "@/lib/auth/permissions";
+import { hasPermission, type Module } from "@/lib/auth/permissions";
 import { getUserOverrides } from "@/lib/db/permissions";
+
+function canDo(role: string | undefined, module: Module, action: "view" | "create" | "edit" | "delete", overrides: Awaited<ReturnType<typeof getUserOverrides>>) {
+  return hasPermission({ role: role ?? "employee" }, module, action, overrides);
+}
 
 const VALID_PERIODS: Period[] = ["week", "month", "quarter", "year"];
 
@@ -38,10 +42,13 @@ export default async function FinancePage(props: {
   const userId = session?.user?.id;
   const overrides = userId ? await getUserOverrides(userId) : [];
 
-  // Owner sees full dashboard. Other roles / override holders see entry-only view.
-  // Employees with an explicit finance:view override can record transactions.
+  // Three tiers:
+  //  isFinanceOwner  → full dashboard (KPIs, all transactions, risk analysis)
+  //  isAccountant    → own transactions list only (no KPIs/summaries)
+  //  canRecord       → entry form only (dept_lead / finance:view override)
   const isFinanceOwner = isOwner(role);
-  const canRecord = hasPermission({ role: role ?? "employee" }, "finance", "view", overrides);
+  const isAccountant = !isFinanceOwner && canDo(role, "accounting", "view", overrides);
+  const canRecord = isAccountant || canDo(role, "finance", "view", overrides);
 
   if (!canRecord) {
     return (
@@ -63,6 +70,108 @@ export default async function FinancePage(props: {
   const period: Period = VALID_PERIODS.includes(periodRaw as Period)
     ? (periodRaw as Period)
     : "month";
+
+  // Accountant — sees only their own transactions (no KPIs, no summaries).
+  if (isAccountant) {
+    const [myTransactions, activeProjectsForDropdown] = await Promise.all([
+      prisma.transaction.findMany({
+        where: { createdById: userId ?? "" },
+        include: { project: { select: { id: true, title: true } } },
+        orderBy: [{ occurredAt: "desc" }, { createdAt: "desc" }],
+      }),
+      prisma.project.findMany({
+        where: { status: { in: ["active", "on_hold"] } },
+        select: { id: true, title: true },
+        orderBy: { title: "asc" },
+      }),
+    ]);
+
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-bold">{t("accounting.title")}</h1>
+            <p className="mt-1 text-sm text-zinc-500">{t("accounting.subtitle")}</p>
+          </div>
+          <NewTransactionButton projects={activeProjectsForDropdown} />
+        </div>
+        {myTransactions.length === 0 ? (
+          <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-zinc-800 bg-zinc-900/30 p-12 text-center">
+            <DollarSign className="h-10 w-10 text-zinc-700" />
+            <div className="text-sm text-zinc-400">{t("accounting.empty")}</div>
+          </div>
+        ) : (
+          <div className="overflow-x-auto rounded-xl border border-zinc-800 bg-zinc-900/40">
+            <table className="w-full text-sm">
+              <thead className="border-b border-zinc-800 bg-zinc-900/60 text-xs text-zinc-500">
+                <tr>
+                  <th className="px-4 py-2 text-start font-normal">{t("table.date")}</th>
+                  <th className="px-4 py-2 text-start font-normal">{t("table.type")}</th>
+                  <th className="px-4 py-2 text-start font-normal">{t("table.category")}</th>
+                  <th className="px-4 py-2 text-start font-normal">{t("table.recurrence")}</th>
+                  <th className="px-4 py-2 text-start font-normal">{t("table.description")}</th>
+                  <th className="px-4 py-2 text-start font-normal">{t("table.project")}</th>
+                  <th className="px-4 py-2 text-start font-normal">{t("table.amount")}</th>
+                  <th className="w-20 px-4 py-2"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-zinc-800/60">
+                {myTransactions.map((tx) => {
+                  const isIncome = tx.kind === "income";
+                  const isRecurring = tx.recurrence === "monthly";
+                  return (
+                    <tr key={tx.id} className="hover:bg-zinc-900/40">
+                      <td className="px-4 py-2 text-xs text-zinc-400 tabular-nums">
+                        {formatDate(tx.occurredAt, locale)}
+                      </td>
+                      <td className="px-4 py-2">
+                        <span className={cn("rounded-full px-2 py-0.5 text-[10px]",
+                          isIncome ? "bg-emerald-500/10 text-emerald-400" : "bg-rose-500/10 text-rose-400")}>
+                          {isIncome ? t("tx.income") : t("tx.expense")}
+                        </span>
+                      </td>
+                      <td className="px-4 py-2 text-xs text-zinc-400">{t(`txCategory.${tx.category}`)}</td>
+                      <td className="px-4 py-2">
+                        {isRecurring ? (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-sky-500/10 px-2 py-0.5 text-[10px] text-sky-400">
+                            <Repeat className="h-2.5 w-2.5" />
+                            {t("recurrence.monthly")}
+                          </span>
+                        ) : (
+                          <span className="text-[10px] text-zinc-600">{t("recurrence.none")}</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-2 text-xs text-zinc-300">{tx.description ?? "—"}</td>
+                      <td className="px-4 py-2 text-xs text-sky-400">{tx.project?.title ?? "—"}</td>
+                      <td className={cn("px-4 py-2 text-sm font-semibold tabular-nums",
+                        isIncome ? "text-emerald-400" : "text-rose-400")}>
+                        {isIncome ? "+" : "−"}
+                        {tx.amountQar.toLocaleString("en")} {locale === "en" ? "QAR" : "ر.ق"}
+                        {isRecurring && (
+                          <span className="mx-1 text-[10px] opacity-70">{t("finance.monthlyProjects.perMonth")}</span>
+                        )}
+                      </td>
+                      <td className="px-2 py-2">
+                        <div className="flex items-center gap-1">
+                          <EditTransactionButton
+                            tx={{ id: tx.id, kind: tx.kind, category: tx.category, amountQar: tx.amountQar,
+                              description: tx.description, occurredAt: tx.occurredAt,
+                              recurrence: tx.recurrence, recurrenceEndsAt: tx.recurrenceEndsAt, projectId: tx.projectId }}
+                            projects={activeProjectsForDropdown}
+                          />
+                          <DeleteTransactionButton id={tx.id} />
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   // Manager / dept_lead get the entry-only view: list of active projects to tag
   // their transactions, plus the "new transaction" button. We skip every

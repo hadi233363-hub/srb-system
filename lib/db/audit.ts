@@ -61,6 +61,10 @@ export type AuditAction =
   | "client.create"
   | "client.update"
   | "client.delete"
+  // Partner share (owner-only private finance feature)
+  | "partnerShare.create"
+  | "partnerShare.update"
+  | "partnerShare.delete"
   // Backup
   | "backup.run";
 
@@ -74,7 +78,8 @@ export interface AuditTarget {
     | "meeting"
     | "shoot"
     | "equipment"
-    | "client";
+    | "client"
+    | "partnerShare";
   id?: string | null;
   label?: string | null;
 }
@@ -165,6 +170,9 @@ export const AUDIT_ACTION_LABEL_AR: Record<AuditAction, string> = {
   "client.create": "إضافة عميل",
   "client.update": "تعديل بيانات عميل",
   "client.delete": "حذف عميل",
+  "partnerShare.create": "إضافة نسبة شريك",
+  "partnerShare.update": "تعديل نسبة شريك",
+  "partnerShare.delete": "حذف نسبة شريك",
   "backup.run": "نسخ احتياطي",
 };
 
@@ -210,6 +218,9 @@ export const AUDIT_ACTION_LABEL_EN: Record<AuditAction, string> = {
   "client.create": "Add client",
   "client.update": "Update client",
   "client.delete": "Delete client",
+  "partnerShare.create": "Add partner share",
+  "partnerShare.update": "Update partner share",
+  "partnerShare.delete": "Delete partner share",
   "backup.run": "Backup",
 };
 
