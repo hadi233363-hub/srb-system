@@ -18,8 +18,10 @@ export interface ShareEntry {
   projectTitle: string;
   partnerName: string;
   sharePercent: number;
+  costQar: number;
   notes: string | null;
   projectIncome: number;
+  netAfterCost: number;
   partnerAmount: number;
 }
 
@@ -46,8 +48,11 @@ export function PartnerShareManager({ shares, projects, locale }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  const totalPartnerAmount = shares.reduce((s, r) => s + r.partnerAmount, 0);
-  const totalIncome = shares.reduce((s, r) => s + r.projectIncome, 0);
+  // ── Totals ──────────────────────────────────────────────────────────────
+  const totalIncome  = shares.reduce((s, r) => s + r.projectIncome, 0);
+  const totalCost    = shares.reduce((s, r) => s + r.costQar, 0);
+  const totalNet     = shares.reduce((s, r) => s + r.netAfterCost, 0);
+  const totalPartner = shares.reduce((s, r) => s + r.partnerAmount, 0);
 
   function close() {
     setModal({ kind: "closed" });
@@ -83,23 +88,28 @@ export function PartnerShareManager({ shares, projects, locale }: Props) {
 
   return (
     <div className="space-y-5">
-      {/* Summary cards */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+
+      {/* ── Summary cards ─────────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-4">
           <div className="text-[11px] text-zinc-500">{t("partnerShare.totalIncome")}</div>
           <div className="mt-1 text-xl font-bold text-emerald-400">{fmt(totalIncome)}</div>
         </div>
+        <div className="rounded-xl border border-rose-500/20 bg-rose-500/5 p-4">
+          <div className="text-[11px] text-zinc-500">{t("partnerShare.totalCost")}</div>
+          <div className="mt-1 text-xl font-bold text-rose-400">{fmt(totalCost)}</div>
+        </div>
+        <div className="rounded-xl border border-sky-500/20 bg-sky-500/5 p-4">
+          <div className="text-[11px] text-zinc-500">{t("partnerShare.totalNet")}</div>
+          <div className="mt-1 text-xl font-bold text-sky-300">{fmt(totalNet)}</div>
+        </div>
         <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4">
           <div className="text-[11px] text-zinc-500">{t("partnerShare.totalPartnerAmount")}</div>
-          <div className="mt-1 text-xl font-bold text-amber-300">{fmt(totalPartnerAmount)}</div>
-        </div>
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-4">
-          <div className="text-[11px] text-zinc-500">{t("partnerShare.entryCount")}</div>
-          <div className="mt-1 text-xl font-bold text-zinc-100">{shares.length}</div>
+          <div className="mt-1 text-xl font-bold text-amber-300">{fmt(totalPartner)}</div>
         </div>
       </div>
 
-      {/* Table */}
+      {/* ── Table ─────────────────────────────────────────────────────── */}
       <div>
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-sm font-semibold text-zinc-400">{t("partnerShare.tableHeading")}</h2>
@@ -125,6 +135,8 @@ export function PartnerShareManager({ shares, projects, locale }: Props) {
                   <th className="px-4 py-2 text-start font-normal">{t("partnerShare.col.partner")}</th>
                   <th className="px-4 py-2 text-start font-normal">{t("partnerShare.col.percent")}</th>
                   <th className="px-4 py-2 text-start font-normal">{t("partnerShare.col.income")}</th>
+                  <th className="px-4 py-2 text-start font-normal">{t("partnerShare.col.cost")}</th>
+                  <th className="px-4 py-2 text-start font-normal">{t("partnerShare.col.netAfterCost")}</th>
                   <th className="px-4 py-2 text-start font-normal">{t("partnerShare.col.amount")}</th>
                   <th className="w-20 px-4 py-2"></th>
                 </tr>
@@ -140,6 +152,14 @@ export function PartnerShareManager({ shares, projects, locale }: Props) {
                       </span>
                     </td>
                     <td className="px-4 py-2 text-xs text-emerald-400 tabular-nums">{fmt(s.projectIncome)}</td>
+                    <td className="px-4 py-2 text-xs tabular-nums">
+                      {s.costQar > 0 ? (
+                        <span className="text-rose-400">−{fmt(s.costQar)}</span>
+                      ) : (
+                        <span className="text-zinc-600">—</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-2 text-xs text-sky-300 tabular-nums">{fmt(s.netAfterCost)}</td>
                     <td className="px-4 py-2 text-sm font-bold text-amber-300 tabular-nums">
                       {fmt(s.partnerAmount)}
                     </td>
@@ -164,12 +184,27 @@ export function PartnerShareManager({ shares, projects, locale }: Props) {
                   </tr>
                 ))}
               </tbody>
+              {/* Totals footer — only when multiple rows */}
+              {shares.length > 1 && (
+                <tfoot className="border-t-2 border-zinc-700 bg-zinc-900/60 text-xs font-semibold">
+                  <tr>
+                    <td className="px-4 py-2.5 text-zinc-500" colSpan={3}>{t("partnerShare.totalRow")}</td>
+                    <td className="px-4 py-2.5 text-emerald-400 tabular-nums">{fmt(totalIncome)}</td>
+                    <td className="px-4 py-2.5 text-rose-400 tabular-nums">
+                      {totalCost > 0 ? `−${fmt(totalCost)}` : "—"}
+                    </td>
+                    <td className="px-4 py-2.5 text-sky-300 tabular-nums">{fmt(totalNet)}</td>
+                    <td className="px-4 py-2.5 text-amber-300 tabular-nums">{fmt(totalPartner)}</td>
+                    <td />
+                  </tr>
+                </tfoot>
+              )}
             </table>
           </div>
         )}
       </div>
 
-      {/* Add / Edit modal */}
+      {/* ── Add / Edit modal ──────────────────────────────────────────── */}
       {(modal.kind === "add" || modal.kind === "edit") && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
@@ -238,6 +273,30 @@ export function PartnerShareManager({ shares, projects, locale }: Props) {
                 />
               </div>
 
+              {/* Cost (optional) */}
+              <div>
+                <label className="mb-1 block text-xs text-zinc-500">
+                  {t("partnerShare.field.cost")}
+                  <span className="ms-1 text-zinc-600">({t("partnerShare.field.costHint")})</span>
+                </label>
+                <input
+                  name="costQar"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  defaultValue={
+                    modal.kind === "edit" && modal.share.costQar > 0
+                      ? modal.share.costQar
+                      : ""
+                  }
+                  placeholder="0"
+                  className="w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 focus:border-amber-500/50 focus:outline-none"
+                />
+                <p className="mt-1 text-[10px] text-zinc-600">
+                  {t("partnerShare.field.costFormula")}
+                </p>
+              </div>
+
               {/* Notes */}
               <div>
                 <label className="mb-1 block text-xs text-zinc-500">{t("partnerShare.field.notes")}</label>
@@ -270,7 +329,7 @@ export function PartnerShareManager({ shares, projects, locale }: Props) {
         </div>
       )}
 
-      {/* Delete confirmation modal */}
+      {/* ── Delete confirmation modal ──────────────────────────────── */}
       {modal.kind === "delete" && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"

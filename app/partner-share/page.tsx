@@ -49,15 +49,19 @@ export default async function PartnerSharePage() {
 
   const shares: ShareEntry[] = allShares.map((s) => {
     const projectIncome = incomeByProject.get(s.projectId) ?? 0;
-    const partnerAmount = (projectIncome * s.sharePercent) / 100;
+    const costQar = s.costQar ?? 0;
+    const netAfterCost = Math.max(0, projectIncome - costQar);
+    const partnerAmount = (netAfterCost * s.sharePercent) / 100;
     return {
       id: s.id,
       projectId: s.projectId,
       projectTitle: s.project.title,
       partnerName: s.partnerName,
       sharePercent: s.sharePercent,
+      costQar,
       notes: s.notes,
       projectIncome,
+      netAfterCost,
       partnerAmount,
     };
   });

@@ -998,6 +998,7 @@ model PartnerShare {
   project      Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
   partnerName  String   // اسم الشريك
   sharePercent Float    // 0.0 – 100.0
+  costQar      Float    @default(0) // تكلفة تُخصم من الإيراد قبل احتساب نسبة الشريك
   notes        String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt

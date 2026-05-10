@@ -12,6 +12,7 @@ export async function createPartnerShareAction(formData: FormData) {
   const projectId = formData.get("projectId") as string | null;
   const partnerName = safeString(formData.get("partnerName"), MAX_SHORT_TEXT);
   const sharePercentRaw = Number(formData.get("sharePercent"));
+  const costQarRaw = Number(formData.get("costQar") || 0);
   const notes = safeString(formData.get("notes"), MAX_LONG_TEXT);
 
   if (!projectId) return { ok: false, message: "اختر المشروع" };
@@ -19,18 +20,19 @@ export async function createPartnerShareAction(formData: FormData) {
   if (isNaN(sharePercentRaw) || sharePercentRaw <= 0 || sharePercentRaw > 100) {
     return { ok: false, message: "النسبة يجب أن تكون بين 0.1 و 100" };
   }
+  const costQar = isNaN(costQarRaw) || costQarRaw < 0 ? 0 : costQarRaw;
 
   const project = await prisma.project.findUnique({ where: { id: projectId }, select: { id: true, title: true } });
   if (!project) return { ok: false, message: "المشروع غير موجود" };
 
   const share = await prisma.partnerShare.create({
-    data: { projectId, partnerName, sharePercent: sharePercentRaw, notes },
+    data: { projectId, partnerName, sharePercent: sharePercentRaw, costQar, notes },
   });
 
   await logAudit({
     action: "partnerShare.create",
     target: { type: "partnerShare", id: share.id, label: `${partnerName} · ${sharePercentRaw}% · ${project.title}` },
-    metadata: { projectId, partnerName, sharePercent: sharePercentRaw },
+    metadata: { projectId, partnerName, sharePercent: sharePercentRaw, costQar },
   });
 
   revalidatePath("/partner-share");
@@ -42,27 +44,29 @@ export async function updatePartnerShareAction(id: string, formData: FormData) {
 
   const partnerName = safeString(formData.get("partnerName"), MAX_SHORT_TEXT);
   const sharePercentRaw = Number(formData.get("sharePercent"));
+  const costQarRaw = Number(formData.get("costQar") || 0);
   const notes = safeString(formData.get("notes"), MAX_LONG_TEXT);
 
   if (!partnerName) return { ok: false, message: "اسم الشريك مطلوب" };
   if (isNaN(sharePercentRaw) || sharePercentRaw <= 0 || sharePercentRaw > 100) {
     return { ok: false, message: "النسبة يجب أن تكون بين 0.1 و 100" };
   }
+  const costQar = isNaN(costQarRaw) || costQarRaw < 0 ? 0 : costQarRaw;
 
   const existing = await prisma.partnerShare.findUnique({ where: { id } });
   if (!existing) return { ok: false, message: "السجل غير موجود" };
 
   await prisma.partnerShare.update({
     where: { id },
-    data: { partnerName, sharePercent: sharePercentRaw, notes },
+    data: { partnerName, sharePercent: sharePercentRaw, costQar, notes },
   });
 
   await logAudit({
     action: "partnerShare.update",
     target: { type: "partnerShare", id, label: `${partnerName} · ${sharePercentRaw}%` },
     metadata: {
-      before: { partnerName: existing.partnerName, sharePercent: existing.sharePercent },
-      after: { partnerName, sharePercent: sharePercentRaw },
+      before: { partnerName: existing.partnerName, sharePercent: existing.sharePercent, costQar: existing.costQar },
+      after: { partnerName, sharePercent: sharePercentRaw, costQar },
     },
   });
 
